@@ -1,0 +1,68 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_MSAG" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <T100A>
+    <ARBGB>ZMIILO_MSG</ARBGB>
+    <MASTERLANG>E</MASTERLANG>
+    <STEXT>SQL Workbench message</STEXT>
+   </T100A>
+   <T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>000</MSGNR>
+     <TEXT>SQL statement is empty</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>001</MSGNR>
+     <TEXT>Only SELECT statements are allowed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>002</MSGNR>
+     <TEXT>Forbidden SQL syntax detected</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>003</MSGNR>
+     <TEXT>Forbidden SQL keyword detected</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>004</MSGNR>
+     <TEXT>SQL statement could not be parsed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>005</MSGNR>
+     <TEXT>Object &amp;1 is not allowed for this profile</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>006</MSGNR>
+     <TEXT>Field &amp;1 is not valid for this object</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>007</MSGNR>
+     <TEXT>WHERE clause is invalid or not supported</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>008</MSGNR>
+     <TEXT>ORDER BY clause is invalid or not supported</TEXT>
+    </T100>
+   </T100>
+  </asx:values>
+ </asx:abap>
+</abapGit>
