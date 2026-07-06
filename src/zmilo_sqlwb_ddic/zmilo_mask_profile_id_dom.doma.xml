@@ -36,6 +36,12 @@
      <DOMVALUE_L>MASK_PERS</DOMVALUE_L>
      <DDTEXT>Personal data masking</DDTEXT>
     </DD07V>
+    <DD07V>
+     <VALPOS>0005</VALPOS>
+     <DDLANGUAGE>E</DDLANGUAGE>
+     <DOMVALUE_L>MASK_STRI</DOMVALUE_L>
+     <DDTEXT>Strict masking</DDTEXT>
+    </DD07V>
    </DD07V_TAB>
   </asx:values>
  </asx:abap>
