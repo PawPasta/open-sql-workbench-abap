@@ -63,23 +63,29 @@ CLASS zcl_milo_sql_parser DEFINITION
         iv_order        TYPE string
       RETURNING
         VALUE(rv_order) TYPE string.
+
+    CLASS-METHODS normalize_count_distinct_sql
+      IMPORTING
+        iv_sql        TYPE string
+      RETURNING
+        VALUE(rv_sql) TYPE string.
   PROTECTED SECTION.
   PRIVATE SECTION.
 
     CLASS-METHODS parse_join_sources
       IMPORTING
-        iv_from_sql TYPE string
+        iv_from_sql      TYPE string
       CHANGING
-        cs_parts    TYPE ty_query_parts
+        cs_parts         TYPE ty_query_parts
       RAISING
         zcx_milo_validation.
 
     CLASS-METHODS parse_select_fields
       IMPORTING
-        iv_columns      TYPE string
-        iv_join_mode    TYPE abap_bool
+        iv_columns       TYPE string
+        iv_join_mode     TYPE abap_bool
       RETURNING
-        VALUE(rt_field) TYPE tt_select_field
+        VALUE(rt_field)  TYPE tt_select_field
       RAISING
         zcx_milo_validation.
 ENDCLASS.
@@ -200,7 +206,7 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
       SUBMATCHES lv_having.
 
     IF sy-subrc = 0.
-      rs_parts-having_sql = condense( lv_having ).
+      rs_parts-having_sql = normalize_count_distinct_sql( lv_having ).
     ENDIF.
 
     "ORDER BY field ASC/DESC
@@ -434,6 +440,77 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
       ENDIF.
 
     ENDLOOP.
+
+  ENDMETHOD.
+
+
+  METHOD normalize_count_distinct_sql.
+
+    DATA lv_offset TYPE i.
+    DATA lv_length TYPE i.
+    DATA lv_after_offset TYPE i.
+    DATA lv_close_offset TYPE i.
+    DATA lv_prefix TYPE string.
+    DATA lv_suffix TYPE string.
+    DATA lv_rest TYPE string.
+    DATA lv_field TYPE string.
+
+    rv_sql = condense( iv_sql ).
+
+    DO.
+
+      CLEAR: lv_offset,
+             lv_length,
+             lv_after_offset,
+             lv_close_offset,
+             lv_prefix,
+             lv_suffix,
+             lv_rest,
+             lv_field.
+
+      FIND 'COUNT(DISTINCT '
+        IN rv_sql
+        MATCH OFFSET lv_offset
+        MATCH LENGTH lv_length.
+
+      IF sy-subrc <> 0.
+        EXIT.
+      ENDIF.
+
+      lv_after_offset = lv_offset + lv_length.
+
+      lv_prefix = substring(
+        val = rv_sql
+        off = 0
+        len = lv_offset ).
+
+      lv_rest = substring(
+        val = rv_sql
+        off = lv_after_offset ).
+
+      FIND ')'
+        IN lv_rest
+        MATCH OFFSET lv_close_offset.
+
+      IF sy-subrc <> 0.
+        EXIT.
+      ENDIF.
+
+      lv_field = substring(
+        val = lv_rest
+        off = 0
+        len = lv_close_offset ).
+
+      lv_field = condense( lv_field ).
+
+      lv_after_offset = lv_close_offset + 1.
+      lv_suffix = substring(
+        val = lv_rest
+        off = lv_after_offset ).
+
+      rv_sql = |{ lv_prefix }COUNT( DISTINCT { lv_field } ){ lv_suffix }|.
+
+    ENDDO.
 
   ENDMETHOD.
 ENDCLASS.
