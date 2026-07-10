@@ -14,6 +14,14 @@ public section.
       text_symbol    type textpoolky,
    end of ts_text_element .
   types:
+    begin of TS_RUNQUERY,
+        PROFILEID type C length 30,
+        PAGE type I,
+        SQLTEXT type C length 255,
+    end of TS_RUNQUERY .
+  types:
+         tt_text_elements type standard table of ts_text_element with key text_symbol .
+  types:
   begin of TS_SQLWBCOLUMN,
      RESULTID type string,
      POSITION type I,
@@ -26,8 +34,6 @@ public section.
      ISKEY type FLAG,
      LABEL type string,
   end of TS_SQLWBCOLUMN .
-  types:
-         tt_text_elements type standard table of ts_text_element with key text_symbol .
   types:
 TT_SQLWBCOLUMN type standard table of TS_SQLWBCOLUMN .
   types:
@@ -232,6 +238,19 @@ lo_action->set_return_entity_type( 'SqlwbRunResult' ). "#EC NOTEXT
 lo_action->set_http_method( 'POST' ). "#EC NOTEXT
 * Set return type multiplicity
 lo_action->set_return_multiplicity( '0' ). "#EC NOTEXT
+***********************************************************************************************************************************
+* Parameters
+***********************************************************************************************************************************
+
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'ProfileId'    iv_abap_fieldname = 'PROFILEID' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 30 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'Page'    iv_abap_fieldname = 'PAGE' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_int32( ).
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'SqlText'    iv_abap_fieldname = 'SQLTEXT' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 255 ). "#EC NOTEXT
+lo_action->bind_input_structure( iv_structure_name  = 'ZCL_ZSU26_GW_MILO_MPC=>TS_RUNQUERY' ). "#EC NOTEXT
 ***********************************************************************************************************************************
 *   ACTION - RunSavedQuery
 ***********************************************************************************************************************************
@@ -1305,7 +1324,7 @@ lo_entity_set->set_filter_required( abap_false ).
 *&---------------------------------------------------------------------*
 
 
-  CONSTANTS: lc_gen_date_time TYPE timestamp VALUE '20260706074622'.                  "#EC NOTEXT
+  CONSTANTS: lc_gen_date_time TYPE timestamp VALUE '20260709230126'.                  "#EC NOTEXT
   rv_last_modified = super->get_last_modified( ).
   IF rv_last_modified LT lc_gen_date_time.
     rv_last_modified = lc_gen_date_time.
