@@ -1,44 +1,43 @@
-CLASS zcl_milo_executor DEFINITION
-  PUBLIC
-  FINAL
-  CREATE PUBLIC .
+class ZCL_MILO_EXECUTOR definition
+  public
+  final
+  create public .
 
-  PUBLIC SECTION.
+public section.
 
-    CLASS-METHODS execute_select
-      IMPORTING
-        iv_sql              TYPE string
-        iv_wlist_profile_id TYPE zmilo_wlist_profile_id
-        iv_mask_profile_id  TYPE zmilo_mask_profile_id OPTIONAL
-        iv_page             TYPE i DEFAULT 1
-      EXPORTING
-        ev_object_name      TYPE zmilo_obj_name
-        ev_row_count        TYPE i
-        ev_returned_rows    TYPE i
-        ev_status           TYPE string
-        ev_max_rows         TYPE i
-        ev_truncated        TYPE abap_bool
-        ev_rows_json        TYPE string
-      RAISING
-        zcx_milo_validation.
-
-    CLASS-METHODS execute_saved_query
-      IMPORTING
-        iv_query_id         TYPE sysuuid_x16
-        iv_wlist_profile_id TYPE zmilo_wlist_profile_id
-        iv_mask_profile_id  TYPE zmilo_mask_profile_id OPTIONAL
-        iv_page             TYPE i DEFAULT 1
-      EXPORTING
-        ev_object_name      TYPE zmilo_obj_name
-        ev_row_count        TYPE i
-        ev_returned_rows    TYPE i
-        ev_status           TYPE string
-        ev_max_rows         TYPE i
-        ev_truncated        TYPE abap_bool
-        ev_rows_json        TYPE string
-      RAISING
-        zcx_milo_validation.
-
+  class-methods EXECUTE_SELECT
+    importing
+      !IV_SQL type STRING
+      !IV_WLIST_PROFILE_ID type ZMILO_WLIST_PROFILE_ID
+      !IV_MASK_PROFILE_ID type ZMILO_MASK_PROFILE_ID optional
+      !IV_PAGE type I default 1
+    exporting
+      !EV_OBJECT_NAME type ZMILO_OBJ_NAME
+      !EV_ROW_COUNT type I
+      !EV_RETURNED_ROWS type I
+      !EV_STATUS type STRING
+      !EV_MAX_ROWS type I
+      !EV_TRUNCATED type ABAP_BOOL
+      !EV_ROWS_JSON type STRING
+    raising
+      ZCX_MILO_VALIDATION .
+  class-methods EXECUTE_SAVED_QUERY
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+      !IV_QUERY_ID type SYSUUID_X16
+      !IV_WLIST_PROFILE_ID type ZMILO_WLIST_PROFILE_ID
+      !IV_MASK_PROFILE_ID type ZMILO_MASK_PROFILE_ID optional
+      !IV_PAGE type I default 1
+    exporting
+      !EV_OBJECT_NAME type ZMILO_OBJ_NAME
+      !EV_ROW_COUNT type I
+      !EV_RETURNED_ROWS type I
+      !EV_STATUS type STRING
+      !EV_MAX_ROWS type I
+      !EV_TRUNCATED type ABAP_BOOL
+      !EV_ROWS_JSON type STRING
+    raising
+      ZCX_MILO_VALIDATION .
   PROTECTED SECTION.
   PRIVATE SECTION.
 
@@ -644,7 +643,9 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
     DATA ls_query TYPE zmilo_query.
     DATA lv_sql   TYPE string.
 
-    ls_query = zcl_milo_query_repo=>get_query( iv_query_id ).
+    ls_query = zcl_milo_query_repo=>get_query(
+      iv_query_id   = iv_query_id
+      iv_profile_id = iv_profile_id ).
 
     IF ls_query-query_id IS INITIAL.
       RAISE EXCEPTION TYPE zcx_milo_validation

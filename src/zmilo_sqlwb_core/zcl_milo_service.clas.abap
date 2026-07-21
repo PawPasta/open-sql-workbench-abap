@@ -1,17 +1,16 @@
-CLASS zcl_milo_service DEFINITION
-  PUBLIC
-  FINAL
-  CREATE PUBLIC .
+class ZCL_MILO_SERVICE definition
+  public
+  final
+  create public .
 
-  PUBLIC SECTION.
+public section.
 
-    TYPES tt_query TYPE zcl_milo_query_repo=>tt_query.
-    TYPES tt_log   TYPE zcl_milo_log_repo=>tt_log.
-    TYPES tt_ddic_table TYPE zcl_milo_ddic_browser=>tt_table_info.
-    TYPES tt_ddic_field TYPE zcl_milo_ddic_browser=>tt_field_info.
-
-    TYPES:
-      BEGIN OF ty_run_result,
+  types TT_QUERY type ZCL_MILO_QUERY_REPO=>TT_QUERY .
+  types TT_LOG type ZCL_MILO_LOG_REPO=>TT_LOG .
+  types TT_DDIC_TABLE type ZCL_MILO_DDIC_BROWSER=>TT_TABLE_INFO .
+  types TT_DDIC_FIELD type ZCL_MILO_DDIC_BROWSER=>TT_FIELD_INFO .
+  types:
+    BEGIN OF ty_run_result,
         status        TYPE string,
         object_name   TYPE zmilo_obj_name,
         row_count     TYPE i,
@@ -27,162 +26,165 @@ CLASS zcl_milo_service DEFINITION
         csv           TYPE string,
         error_code    TYPE string,
         error_text    TYPE string,
-      END OF ty_run_result.
+      END OF ty_run_result .
 
-    CLASS-METHODS get_role_profile
-      IMPORTING
-        iv_profile_id  TYPE zmilo_profile_id
-      RETURNING
-        VALUE(rs_role) TYPE zmilo_role
-      RAISING
-        zcx_milo_validation.
-
-    CLASS-METHODS run_query
-      IMPORTING
-        iv_profile_id    TYPE zmilo_profile_id
-        iv_sql           TYPE string
-        iv_page          TYPE i DEFAULT 1
-      EXPORTING
-        ev_object_name   TYPE zmilo_obj_name
-        ev_row_count     TYPE i
-        ev_returned_rows TYPE i
-        ev_status        TYPE string
-        ev_max_rows      TYPE i
-        ev_truncated     TYPE abap_bool
-        ev_rows_json     TYPE string
-      RAISING
-        zcx_milo_validation.
-
-    CLASS-METHODS run_query_result
-      IMPORTING
-        iv_profile_id    TYPE zmilo_profile_id
-        iv_sql           TYPE string
-        iv_page          TYPE i DEFAULT 1
-      RETURNING
-        VALUE(rs_result) TYPE ty_run_result.
-
-    CLASS-METHODS run_saved_query
-      IMPORTING
-        iv_profile_id    TYPE zmilo_profile_id
-        iv_query_id      TYPE sysuuid_x16
-        iv_page          TYPE i DEFAULT 1
-      EXPORTING
-        ev_object_name   TYPE zmilo_obj_name
-        ev_row_count     TYPE i
-        ev_returned_rows TYPE i
-        ev_status        TYPE string
-        ev_max_rows      TYPE i
-        ev_truncated     TYPE abap_bool
-        ev_rows_json     TYPE string
-      RAISING
-        zcx_milo_validation.
-
-    CLASS-METHODS run_saved_query_result
-      IMPORTING
-        iv_profile_id    TYPE zmilo_profile_id
-        iv_query_id      TYPE sysuuid_x16
-        iv_page          TYPE i DEFAULT 1
-      RETURNING
-        VALUE(rs_result) TYPE ty_run_result.
-
-    CLASS-METHODS save_query
-      IMPORTING
-        iv_profile_id      TYPE zmilo_profile_id
-        iv_query_name      TYPE zmilo_query_name
-        iv_query_text      TYPE string
-        iv_visibility      TYPE zmilo_visibility OPTIONAL
-        iv_tags            TYPE zmilo_tags OPTIONAL
-        iv_description     TYPE zmilo_description OPTIONAL
-      RETURNING
-        VALUE(rv_query_id) TYPE sysuuid_x16
-      RAISING
-        zcx_milo_validation.
-
-    CLASS-METHODS list_queries
-      IMPORTING
-        iv_profile_id   TYPE zmilo_profile_id
-        iv_owner_only   TYPE abap_bool DEFAULT abap_true
-      RETURNING
-        VALUE(rt_query) TYPE tt_query
-      RAISING
-        zcx_milo_validation.
-
-    CLASS-METHODS list_logs
-      IMPORTING
-        iv_profile_id TYPE zmilo_profile_id
-        iv_user_only  TYPE abap_bool DEFAULT abap_true
-        iv_status     TYPE zmilo_status OPTIONAL
-      RETURNING
-        VALUE(rt_log) TYPE tt_log
-      RAISING
-        zcx_milo_validation.
-
-    CLASS-METHODS search_ddic_tables
-      IMPORTING
-        iv_profile_id   TYPE zmilo_profile_id
-        iv_search       TYPE string
-        iv_max_rows     TYPE i DEFAULT 50
-      RETURNING
-        VALUE(rt_table) TYPE tt_ddic_table
-      RAISING
-        zcx_milo_validation.
-
-    CLASS-METHODS get_ddic_fields
-      IMPORTING
-        iv_profile_id   TYPE zmilo_profile_id
-        iv_obj_name     TYPE zmilo_obj_name
-      RETURNING
-        VALUE(rt_field) TYPE tt_ddic_field
-      RAISING
-        zcx_milo_validation.
-
-    CLASS-METHODS build_result_columns
-      IMPORTING
-        iv_profile_id    TYPE zmilo_profile_id
-        iv_sql           TYPE string
-        iv_result_id     TYPE sysuuid_x16 OPTIONAL
-      RETURNING
-        VALUE(rt_column) TYPE zcl_milo_result_repo=>tt_column
-      RAISING
-        zcx_milo_validation.
-
-    CLASS-METHODS preview_table
-      IMPORTING
-        iv_profile_id  TYPE zmilo_profile_id
-        iv_obj_name    TYPE zmilo_obj_name
-        iv_row_limit   TYPE i DEFAULT 100
-        iv_page        TYPE i DEFAULT 1
-      EXPORTING
-        ev_object_name TYPE zmilo_obj_name
-        ev_row_count   TYPE i
-        ev_total_rows  TYPE i
-        ev_rows_json   TYPE string
-      RAISING
-        zcx_milo_validation.
-
-    CLASS-METHODS preview_table_csv
-      IMPORTING
-        iv_profile_id  TYPE zmilo_profile_id
-        iv_obj_name    TYPE zmilo_obj_name
-        iv_row_limit   TYPE i DEFAULT 100
-        iv_page        TYPE i DEFAULT 1
-      EXPORTING
-        ev_object_name TYPE zmilo_obj_name
-        ev_row_count   TYPE i
-        ev_total_rows  TYPE i
-        ev_csv         TYPE string
-      RAISING
-        zcx_milo_validation.
-
-    CLASS-METHODS preview_table_result
-      IMPORTING
-        iv_profile_id    TYPE zmilo_profile_id
-        iv_obj_name      TYPE zmilo_obj_name
-        iv_row_limit     TYPE i DEFAULT 100
-        iv_page          TYPE i DEFAULT 1
-      RETURNING
-        VALUE(rs_result) TYPE ty_run_result.
-
+  class-methods GET_ROLE_PROFILE
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+    returning
+      value(RS_ROLE) type ZMILO_ROLE
+    raising
+      ZCX_MILO_VALIDATION .
+  class-methods RUN_QUERY
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+      !IV_SQL type STRING
+      !IV_PAGE type I default 1
+    exporting
+      !EV_OBJECT_NAME type ZMILO_OBJ_NAME
+      !EV_ROW_COUNT type I
+      !EV_RETURNED_ROWS type I
+      !EV_STATUS type STRING
+      !EV_MAX_ROWS type I
+      !EV_TRUNCATED type ABAP_BOOL
+      !EV_ROWS_JSON type STRING
+    raising
+      ZCX_MILO_VALIDATION .
+  class-methods RUN_QUERY_RESULT
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+      !IV_SQL type STRING
+      !IV_PAGE type I default 1
+    returning
+      value(RS_RESULT) type TY_RUN_RESULT .
+  class-methods RUN_SAVED_QUERY
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+      !IV_QUERY_ID type SYSUUID_X16
+      !IV_PAGE type I default 1
+    exporting
+      !EV_OBJECT_NAME type ZMILO_OBJ_NAME
+      !EV_ROW_COUNT type I
+      !EV_RETURNED_ROWS type I
+      !EV_STATUS type STRING
+      !EV_MAX_ROWS type I
+      !EV_TRUNCATED type ABAP_BOOL
+      !EV_ROWS_JSON type STRING
+    raising
+      ZCX_MILO_VALIDATION .
+  class-methods RUN_SAVED_QUERY_RESULT
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+      !IV_QUERY_ID type SYSUUID_X16
+      !IV_PAGE type I default 1
+    returning
+      value(RS_RESULT) type TY_RUN_RESULT .
+  class-methods SAVE_QUERY
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+      !IV_QUERY_NAME type ZMILO_QUERY_NAME
+      !IV_QUERY_TEXT type STRING
+      !IV_VISIBILITY type ZMILO_VISIBILITY optional
+      !IV_TAGS type ZMILO_TAGS optional
+      !IV_DESCRIPTION type ZMILO_DESCRIPTION optional
+    returning
+      value(RV_QUERY_ID) type SYSUUID_X16
+    raising
+      ZCX_MILO_VALIDATION .
+  class-methods UPDATE_QUERY
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+      !IV_QUERY_ID type SYSUUID_X16
+      !IV_QUERY_NAME type ZMILO_QUERY_NAME
+      !IV_QUERY_TEXT type STRING
+      !IV_VISIBILITY type ZMILO_VISIBILITY optional
+      !IV_TAGS type ZMILO_TAGS optional
+      !IV_DESCRIPTION type ZMILO_DESCRIPTION optional
+    raising
+      ZCX_MILO_VALIDATION .
+  class-methods DELETE_QUERY
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+      !IV_QUERY_ID type SYSUUID_X16
+    raising
+      ZCX_MILO_VALIDATION .
+  class-methods LIST_QUERIES
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+      !IV_OWNER_ONLY type ABAP_BOOL default ABAP_TRUE
+    returning
+      value(RT_QUERY) type TT_QUERY
+    raising
+      ZCX_MILO_VALIDATION .
+  class-methods LIST_LOGS
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+      !IV_USER_ONLY type ABAP_BOOL default ABAP_TRUE
+      !IV_STATUS type ZMILO_STATUS optional
+    returning
+      value(RT_LOG) type TT_LOG
+    raising
+      ZCX_MILO_VALIDATION .
+  class-methods SEARCH_DDIC_TABLES
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+      !IV_SEARCH type STRING
+      !IV_MAX_ROWS type I default 50
+    returning
+      value(RT_TABLE) type TT_DDIC_TABLE
+    raising
+      ZCX_MILO_VALIDATION .
+  class-methods GET_DDIC_FIELDS
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+      !IV_OBJ_NAME type ZMILO_OBJ_NAME
+    returning
+      value(RT_FIELD) type TT_DDIC_FIELD
+    raising
+      ZCX_MILO_VALIDATION .
+  class-methods BUILD_RESULT_COLUMNS
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+      !IV_SQL type STRING
+      !IV_RESULT_ID type SYSUUID_X16 optional
+    returning
+      value(RT_COLUMN) type ZCL_MILO_RESULT_REPO=>TT_COLUMN
+    raising
+      ZCX_MILO_VALIDATION .
+  class-methods PREVIEW_TABLE
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+      !IV_OBJ_NAME type ZMILO_OBJ_NAME
+      !IV_ROW_LIMIT type I default 100
+      !IV_PAGE type I default 1
+    exporting
+      !EV_OBJECT_NAME type ZMILO_OBJ_NAME
+      !EV_ROW_COUNT type I
+      !EV_TOTAL_ROWS type I
+      !EV_ROWS_JSON type STRING
+    raising
+      ZCX_MILO_VALIDATION .
+  class-methods PREVIEW_TABLE_CSV
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+      !IV_OBJ_NAME type ZMILO_OBJ_NAME
+      !IV_ROW_LIMIT type I default 100
+      !IV_PAGE type I default 1
+    exporting
+      !EV_OBJECT_NAME type ZMILO_OBJ_NAME
+      !EV_ROW_COUNT type I
+      !EV_TOTAL_ROWS type I
+      !EV_CSV type STRING
+    raising
+      ZCX_MILO_VALIDATION .
+  class-methods PREVIEW_TABLE_RESULT
+    importing
+      !IV_PROFILE_ID type ZMILO_PROFILE_ID
+      !IV_OBJ_NAME type ZMILO_OBJ_NAME
+      !IV_ROW_LIMIT type I default 100
+      !IV_PAGE type I default 1
+    returning
+      value(RS_RESULT) type TY_RUN_RESULT .
   PROTECTED SECTION.
   PRIVATE SECTION.
 
@@ -545,6 +547,7 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
     ls_role = get_active_role( iv_profile_id ).
 
     rt_query = zcl_milo_query_repo=>list_queries(
+      iv_profile_id = iv_profile_id
       iv_owner_only = iv_owner_only
       iv_allow_all  = abap_false ).
 
@@ -923,6 +926,7 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
     zcl_milo_executor=>execute_saved_query(
       EXPORTING
         iv_query_id         = iv_query_id
+        iv_profile_id       = iv_profile_id
         iv_wlist_profile_id = ls_role-wlist_profile_id
         iv_mask_profile_id  = ls_role-mask_profile_id
         iv_page             = iv_page
@@ -943,13 +947,17 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
     DATA lv_page TYPE i.
 
     CLEAR rs_result.
+    lv_page = iv_page.
+    IF lv_page IS INITIAL OR lv_page < 1.
+      lv_page = 1.
+    ENDIF.
 
     TRY.
         run_saved_query(
           EXPORTING
             iv_profile_id  = iv_profile_id
             iv_query_id    = iv_query_id
-            iv_page        = iv_page
+            iv_page        = lv_page
           IMPORTING
             ev_object_name   = rs_result-object_name
             ev_row_count     = rs_result-row_count
@@ -960,10 +968,6 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
             ev_rows_json     = rs_result-rows_json ).
 
         rs_result-total_rows = rs_result-row_count.
-        lv_page = iv_page.
-        IF lv_page IS INITIAL OR lv_page < 1.
-          lv_page = 1.
-        ENDIF.
         rs_result-page = lv_page.
         rs_result-page_size = rs_result-max_rows.
         IF rs_result-page_size > 0.
@@ -994,13 +998,23 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
   METHOD save_query.
 
     DATA ls_role TYPE zmilo_role.
+    DATA lv_visibility TYPE zmilo_visibility.
 
     ls_role = get_active_role( iv_profile_id ).
+
+    lv_visibility = to_upper( condense( iv_visibility ) ).
+
+    IF lv_visibility = 'PROFILE' OR lv_visibility = 'SHARED'.
+      lv_visibility = 'PROFILE'.
+    ELSE.
+      lv_visibility = 'PRIVATE'.
+    ENDIF.
 
     rv_query_id = zcl_milo_query_repo=>save_query(
       iv_query_name       = iv_query_name
       iv_query_text       = iv_query_text
-      iv_visibility       = iv_visibility
+      iv_visibility       = lv_visibility
+      iv_profile_id       = iv_profile_id
       iv_tags             = iv_tags
       iv_description      = iv_description ).
 
@@ -1051,6 +1065,61 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
       ORDER BY w~obj_name
       INTO CORRESPONDING FIELDS OF TABLE @rt_table
       UP TO @lv_max_rows ROWS.
+
+  ENDMETHOD.
+
+
+  METHOD delete_query.
+
+    DATA ls_role TYPE zmilo_role.
+    DATA lv_deleted TYPE abap_bool.
+
+    ls_role = get_active_role( iv_profile_id ).
+
+    lv_deleted = zcl_milo_query_repo=>deactivate_query(
+      iv_query_id   = iv_query_id
+      iv_profile_id = iv_profile_id ).
+
+    IF lv_deleted <> abap_true.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid         = zcx_milo_validation=>object_not_allowed
+          mv_object_name = 'SAVED_QUERY'.
+    ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD update_query.
+
+    DATA ls_role TYPE zmilo_role.
+    DATA lv_visibility TYPE zmilo_visibility.
+    DATA lv_updated TYPE abap_bool.
+
+    ls_role = get_active_role( iv_profile_id ).
+
+    lv_visibility = to_upper( condense( iv_visibility ) ).
+    IF lv_visibility = 'PROFILE' OR lv_visibility = 'SHARED'.
+      lv_visibility = 'PROFILE'.
+    ELSE.
+      lv_visibility = 'PRIVATE'.
+    ENDIF.
+
+    lv_updated = zcl_milo_query_repo=>update_query(
+      iv_query_id    = iv_query_id
+      iv_profile_id  = iv_profile_id
+      iv_query_name  = iv_query_name
+      iv_query_text  = iv_query_text
+      iv_visibility  = lv_visibility
+      iv_tags        = iv_tags
+      iv_description = iv_description ).
+
+    IF lv_updated <> abap_true.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid         = zcx_milo_validation=>object_not_allowed
+          mv_object_name = 'SAVED_QUERY'.
+    ENDIF.
 
   ENDMETHOD.
 ENDCLASS.

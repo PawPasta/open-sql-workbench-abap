@@ -13,6 +13,8 @@ protected section.
     redefinition .
   methods SQLWBPAGECHUNKSE_GET_ENTITYSET
     redefinition .
+  methods SQLWBSAVEDQUERYS_GET_ENTITYSET
+    redefinition .
 private section.
 ENDCLASS.
 
@@ -415,109 +417,174 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
   ENDMETHOD.
 
 
- METHOD sqlwbcolumnset_get_entityset.
+ METHOD SQLWBcolumnset_get_entityset.
 
-    DATA lv_result_c32 TYPE string.
-    DATA lv_result_id  TYPE sysuuid_x16.
-    DATA lv_row_no     TYPE i.
-    DATA lv_skip       TYPE i.
-    DATA lv_top        TYPE i.
-    DATA lt_column     TYPE zcl_sqlwb_result_repo=>tt_column.
+   DATA lv_result_c32 TYPE string.
+   DATA lv_result_id  TYPE sysuuid_x16.
+   DATA lv_row_no     TYPE i.
+   DATA lv_skip       TYPE i.
+   DATA lv_top        TYPE i.
+   DATA lt_column     TYPE zcl_milo_result_repo=>tt_column.
 
-    LOOP AT it_filter_select_options INTO DATA(ls_filter).
-      IF to_upper( ls_filter-property ) = 'RESULTID'.
-        READ TABLE ls_filter-select_options INTO DATA(ls_option) INDEX 1.
-        IF sy-subrc = 0.
-          lv_result_c32 = ls_option-low.
-        ENDIF.
-      ENDIF.
-    ENDLOOP.
+   LOOP AT it_filter_select_options INTO DATA(ls_filter).
+     IF to_upper( ls_filter-property ) = 'RESULTID'.
+       READ TABLE ls_filter-select_options INTO DATA(ls_option) INDEX 1.
+       IF sy-subrc = 0.
+         lv_result_c32 = ls_option-low.
+       ENDIF.
+     ENDIF.
+   ENDLOOP.
 
-    lv_result_id = zcl_sqlwb_result_repo=>result_id_from_c32( lv_result_c32 ).
+   lv_result_id = zcl_milo_result_repo=>result_id_from_c32( lv_result_c32 ).
 
-    IF lv_result_id IS INITIAL.
-      RETURN.
-    ENDIF.
+   IF lv_result_id IS INITIAL.
+     RETURN.
+   ENDIF.
 
-    lt_column = zcl_sqlwb_result_repo=>list_columns( lv_result_id ).
+   lt_column = zcl_milo_result_repo=>list_columns( lv_result_id ).
 
-    lv_skip = is_paging-skip.
-    lv_top = is_paging-top.
+   lv_skip = is_paging-skip.
+   lv_top = is_paging-top.
 
-    LOOP AT lt_column INTO DATA(ls_column).
-      lv_row_no = lv_row_no + 1.
+   LOOP AT lt_column INTO DATA(ls_column).
+     lv_row_no = lv_row_no + 1.
 
-      IF lv_row_no <= lv_skip.
-        CONTINUE.
-      ENDIF.
+     IF lv_row_no <= lv_skip.
+       CONTINUE.
+     ENDIF.
 
-      IF lv_top > 0 AND lv_row_no > lv_skip + lv_top.
-        EXIT.
-      ENDIF.
+     IF lv_top > 0 AND lv_row_no > lv_skip + lv_top.
+       EXIT.
+     ENDIF.
 
-      APPEND INITIAL LINE TO et_entityset ASSIGNING FIELD-SYMBOL(<ls_entity>).
-      <ls_entity>-resultid  = lv_result_c32.
-      <ls_entity>-position  = ls_column-column_position.
-      <ls_entity>-fieldname = ls_column-field_name.
-      <ls_entity>-jsonkey   = ls_column-json_key.
-      <ls_entity>-element   = ls_column-element.
-      <ls_entity>-abaptype  = ls_column-abap_type.
-      <ls_entity>-length    = ls_column-length.
-      <ls_entity>-decimals  = ls_column-decimals.
-      <ls_entity>-iskey     = xsdbool( ls_column-is_key = abap_true OR ls_column-is_key = 'X' ).
-      <ls_entity>-label     = ls_column-column_label.
-    ENDLOOP.
+     APPEND INITIAL LINE TO et_entityset ASSIGNING FIELD-SYMBOL(<ls_entity>).
+     <ls_entity>-resultid  = lv_result_c32.
+     <ls_entity>-position  = ls_column-column_position.
+     <ls_entity>-fieldname = ls_column-field_name.
+     <ls_entity>-jsonkey   = ls_column-json_key.
+     <ls_entity>-element   = ls_column-element.
+     <ls_entity>-abaptype  = ls_column-abap_type.
+     <ls_entity>-length    = ls_column-length.
+     <ls_entity>-decimals  = ls_column-decimals.
+     <ls_entity>-iskey     = xsdbool( ls_column-is_key = abap_true OR ls_column-is_key = 'X' ).
+     <ls_entity>-label     = ls_column-column_label.
+   ENDLOOP.
 
-  ENDMETHOD.
+ ENDMETHOD.
 
 
  METHOD sqlwbpagechunkse_get_entityset.
 
-* EntitySet: SqlwbPageChunkSet
-* Dán toàn bộ nội dung file này vào method SQLWBPAGECHUNKSE_GET_ENTITYSET
-* sau khi redefine trong ZCL_ZSQLWB_ODATA_DPC_EXT.
-* Lưu ý: tên method generated bị cắt thành PAGECHUNKSE, không có chữ T cuối.
-    DATA lv_result_c32 TYPE string.
-    DATA lv_result_id  TYPE sysuuid_x16.
-    DATA lv_page_no    TYPE i.
+   DATA lv_result_c32 TYPE string.
+   DATA lv_result_id  TYPE sysuuid_x16.
+   DATA lv_page_no    TYPE i.
+   DATA lv_row_no     TYPE i.
+   DATA lv_skip       TYPE i.
+   DATA lv_top        TYPE i.
+   DATA lt_page       TYPE zcl_milo_result_repo=>tt_page.
+
+   LOOP AT it_filter_select_options INTO DATA(ls_filter).
+     CASE to_upper( ls_filter-property ).
+       WHEN 'RESULTID'.
+         READ TABLE ls_filter-select_options INTO DATA(ls_result_option) INDEX 1.
+         IF sy-subrc = 0.
+           lv_result_c32 = ls_result_option-low.
+         ENDIF.
+       WHEN 'PAGENO'.
+         READ TABLE ls_filter-select_options INTO DATA(ls_page_option) INDEX 1.
+         IF sy-subrc = 0.
+           lv_page_no = ls_page_option-low.
+         ENDIF.
+     ENDCASE.
+   ENDLOOP.
+
+   IF lv_page_no IS INITIAL.
+     lv_page_no = 1.
+   ENDIF.
+
+   lv_result_id = zcl_milo_result_repo=>result_id_from_c32( lv_result_c32 ).
+
+   IF lv_result_id IS INITIAL.
+     RETURN.
+   ENDIF.
+
+   lt_page = zcl_milo_result_repo=>list_page_chunks(
+     iv_result_id = lv_result_id
+     iv_page_no   = lv_page_no ).
+
+   lv_skip = is_paging-skip.
+   lv_top = is_paging-top.
+
+   LOOP AT lt_page INTO DATA(ls_page).
+     lv_row_no = lv_row_no + 1.
+
+     IF lv_row_no <= lv_skip.
+       CONTINUE.
+     ENDIF.
+
+     IF lv_top > 0 AND lv_row_no > lv_skip + lv_top.
+       EXIT.
+     ENDIF.
+
+     APPEND INITIAL LINE TO et_entityset ASSIGNING FIELD-SYMBOL(<ls_entity>).
+     <ls_entity>-resultid     = lv_result_c32.
+     <ls_entity>-pageno       = ls_page-page_no.
+     <ls_entity>-chunkno      = ls_page-chunk_no.
+     <ls_entity>-payloadpart  = ls_page-payload_part.
+     <ls_entity>-payloadlen   = ls_page-payload_len.
+     <ls_entity>-islastchunk  = xsdbool( ls_page-is_last_chunk = abap_true OR ls_page-is_last_chunk = 'X' ).
+   ENDLOOP.
+
+ ENDMETHOD.
+
+
+  METHOD SQLWBSAVEDQUERYS_GET_ENTITYSET.
+* EntitySet: SqlwbSavedQuerySet
+* Dán toàn bộ nội dung file này vào method SQLWBSAVEDQUERYS_GET_ENTITYSET
+* sau khi redefine trong ZCL_ZSU26_ODATA_DPC_EXT.
+
+    DATA lv_profile_id TYPE zmilo_profile_id.
+    DATA lv_owner_only TYPE abap_bool VALUE abap_false.
     DATA lv_row_no     TYPE i.
     DATA lv_skip       TYPE i.
     DATA lv_top        TYPE i.
-    DATA lt_page       TYPE zcl_sqlwb_result_repo=>tt_page.
+    DATA lt_query      TYPE zcl_milo_service=>tt_query.
 
     LOOP AT it_filter_select_options INTO DATA(ls_filter).
       CASE to_upper( ls_filter-property ).
-        WHEN 'RESULTID'.
-          READ TABLE ls_filter-select_options INTO DATA(ls_result_option) INDEX 1.
+        WHEN 'PROFILEID'.
+          READ TABLE ls_filter-select_options INTO DATA(ls_profile_option) INDEX 1.
           IF sy-subrc = 0.
-            lv_result_c32 = ls_result_option-low.
+            lv_profile_id = ls_profile_option-low.
           ENDIF.
-        WHEN 'PAGENO'.
-          READ TABLE ls_filter-select_options INTO DATA(ls_page_option) INDEX 1.
+        WHEN 'OWNERONLY'.
+          READ TABLE ls_filter-select_options INTO DATA(ls_owner_option) INDEX 1.
           IF sy-subrc = 0.
-            lv_page_no = ls_page_option-low.
+            IF to_upper( ls_owner_option-low ) = 'FALSE'
+               OR ls_owner_option-low = '0'
+               OR ls_owner_option-low IS INITIAL.
+              lv_owner_only = abap_false.
+            ELSE.
+              lv_owner_only = abap_true.
+            ENDIF.
           ENDIF.
       ENDCASE.
     ENDLOOP.
 
-    IF lv_page_no IS INITIAL.
-      lv_page_no = 1.
-    ENDIF.
-
-    lv_result_id = zcl_sqlwb_result_repo=>result_id_from_c32( lv_result_c32 ).
-
-    IF lv_result_id IS INITIAL.
-      RETURN.
-    ENDIF.
-
-    lt_page = zcl_sqlwb_result_repo=>list_page_chunks(
-      iv_result_id = lv_result_id
-      iv_page_no   = lv_page_no ).
+    TRY.
+        lt_query = zcl_milo_service=>list_queries(
+          iv_profile_id = lv_profile_id
+          iv_owner_only = lv_owner_only ).
+      CATCH zcx_milo_validation.
+        CLEAR lt_query.
+      CATCH cx_root.
+        CLEAR lt_query.
+    ENDTRY.
 
     lv_skip = is_paging-skip.
     lv_top = is_paging-top.
 
-    LOOP AT lt_page INTO DATA(ls_page).
+    LOOP AT lt_query INTO DATA(ls_query).
       lv_row_no = lv_row_no + 1.
 
       IF lv_row_no <= lv_skip.
@@ -529,13 +596,18 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
       ENDIF.
 
       APPEND INITIAL LINE TO et_entityset ASSIGNING FIELD-SYMBOL(<ls_entity>).
-      <ls_entity>-resultid     = lv_result_c32.
-      <ls_entity>-pageno       = ls_page-page_no.
-      <ls_entity>-chunkno      = ls_page-chunk_no.
-      <ls_entity>-payloadpart  = ls_page-payload_part.
-      <ls_entity>-payloadlen   = ls_page-payload_len.
-      <ls_entity>-islastchunk  = xsdbool( ls_page-is_last_chunk = abap_true OR ls_page-is_last_chunk = 'X' ).
+      <ls_entity>-profileid = ls_query-profile_id.
+      <ls_entity>-queryid = zcl_milo_result_repo=>result_id_to_c32(
+        iv_result_id = ls_query-query_id ).
+      <ls_entity>-owner = ls_query-owner.
+      <ls_entity>-queryname = ls_query-query_name.
+      <ls_entity>-querytext = ls_query-query_text.
+      <ls_entity>-visibility = ls_query-visibility.
+      <ls_entity>-isactive = xsdbool( ls_query-is_active = abap_true OR ls_query-is_active = 'X' ).
+      <ls_entity>-createddate = ls_query-created_date.
+      <ls_entity>-createdtime = ls_query-created_time.
+      <ls_entity>-tags = ls_query-tags.
+      <ls_entity>-description = ls_query-description.
     ENDLOOP.
-
   ENDMETHOD.
 ENDCLASS.

@@ -6,6 +6,11 @@ class ZCL_ZSU26_GW_MILO_MPC definition
 public section.
 
   types:
+    begin of TS_GETFIELDS,
+        OBJECTNAME type C length 40,
+        PROFILEID type C length 30,
+    end of TS_GETFIELDS .
+  types:
    begin of ts_text_element,
       artifact_name  type c length 40,       " technical name
       artifact_type  type c length 4,
@@ -14,13 +19,51 @@ public section.
       text_symbol    type textpoolky,
    end of ts_text_element .
   types:
-    begin of TS_RUNQUERY,
+         tt_text_elements type standard table of ts_text_element with key text_symbol .
+  types:
+    begin of TS_PREVIEWTABLE,
         PROFILEID type C length 30,
         PAGE type I,
+        OBJECTNAME type C length 40,
+        MAXROWS type I,
+    end of TS_PREVIEWTABLE .
+  types:
+    begin of TS_RUNQUERY,
+        PAGE type I,
+        PROFILEID type C length 30,
         SQLTEXT type C length 255,
     end of TS_RUNQUERY .
   types:
-         tt_text_elements type standard table of ts_text_element with key text_symbol .
+    begin of TS_RUNSAVEDQUERY,
+        QUERYID type C length 32,
+        PROFILEID type C length 30,
+        PAGE type I,
+    end of TS_RUNSAVEDQUERY .
+  types:
+    begin of TS_SAVEQUERY,
+        VISIBILITY type C length 10,
+        TAGS type C length 120,
+        QUERYTEXT type C length 1024,
+        QUERYNAME type C length 60,
+        PROFILEID type C length 30,
+        DESCRIPTION type C length 255,
+    end of TS_SAVEQUERY .
+  types:
+    begin of TS_SEARCHTABLES,
+        MAXROWS type I,
+        PROFILEID type C length 30,
+        SEARCHTEXT type C length 40,
+    end of TS_SEARCHTABLES .
+  types:
+    begin of TS_UPDATESAVEDQUERY,
+        DESCRIPTION type C length 255,
+        VISIBILITY type C length 10,
+        TAGS type C length 120,
+        QUERYTEXT type C length 1024,
+        QUERYNAME type C length 60,
+        QUERYID type C length 32,
+        PROFILEID type C length 30,
+    end of TS_UPDATESAVEDQUERY .
   types:
   begin of TS_SQLWBCOLUMN,
      RESULTID type string,
@@ -217,21 +260,21 @@ lo_action->set_http_method( 'GET' ). "#EC NOTEXT
 * Set return type multiplicity
 lo_action->set_return_multiplicity( 'M' ). "#EC NOTEXT
 ***********************************************************************************************************************************
+* Parameters
+***********************************************************************************************************************************
+
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'ObjectName'    iv_abap_fieldname = 'OBJECTNAME' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 40 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'ProfileId'    iv_abap_fieldname = 'PROFILEID' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 30 ). "#EC NOTEXT
+lo_action->bind_input_structure( iv_structure_name  = 'ZCL_ZSU26_GW_MILO_MPC=>TS_GETFIELDS' ). "#EC NOTEXT
+***********************************************************************************************************************************
 *   ACTION - PreviewTable
 ***********************************************************************************************************************************
 
 lo_action = model->create_action( 'PreviewTable' ).  "#EC NOTEXT
-*Set return entity type
-lo_action->set_return_entity_type( 'SqlwbRunResult' ). "#EC NOTEXT
-*Set HTTP method GET or POST
-lo_action->set_http_method( 'POST' ). "#EC NOTEXT
-* Set return type multiplicity
-lo_action->set_return_multiplicity( '0' ). "#EC NOTEXT
-***********************************************************************************************************************************
-*   ACTION - RunQuery
-***********************************************************************************************************************************
-
-lo_action = model->create_action( 'RunQuery' ).  "#EC NOTEXT
 *Set return entity type
 lo_action->set_return_entity_type( 'SqlwbRunResult' ). "#EC NOTEXT
 *Set HTTP method GET or POST
@@ -247,6 +290,32 @@ lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
 lo_parameter->set_maxlength( iv_max_length = 30 ). "#EC NOTEXT
 lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'Page'    iv_abap_fieldname = 'PAGE' ). "#EC NOTEXT
 lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_int32( ).
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'ObjectName'    iv_abap_fieldname = 'OBJECTNAME' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 40 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'MaxRows'    iv_abap_fieldname = 'MAXROWS' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_int32( ).
+lo_action->bind_input_structure( iv_structure_name  = 'ZCL_ZSU26_GW_MILO_MPC=>TS_PREVIEWTABLE' ). "#EC NOTEXT
+***********************************************************************************************************************************
+*   ACTION - RunQuery
+***********************************************************************************************************************************
+
+lo_action = model->create_action( 'RunQuery' ).  "#EC NOTEXT
+*Set return entity type
+lo_action->set_return_entity_type( 'SqlwbRunResult' ). "#EC NOTEXT
+*Set HTTP method GET or POST
+lo_action->set_http_method( 'POST' ). "#EC NOTEXT
+* Set return type multiplicity
+lo_action->set_return_multiplicity( '0' ). "#EC NOTEXT
+***********************************************************************************************************************************
+* Parameters
+***********************************************************************************************************************************
+
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'Page'    iv_abap_fieldname = 'PAGE' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_int32( ).
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'ProfileId'    iv_abap_fieldname = 'PROFILEID' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 30 ). "#EC NOTEXT
 lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'SqlText'    iv_abap_fieldname = 'SQLTEXT' ). "#EC NOTEXT
 lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
 lo_parameter->set_maxlength( iv_max_length = 255 ). "#EC NOTEXT
@@ -263,6 +332,19 @@ lo_action->set_http_method( 'POST' ). "#EC NOTEXT
 * Set return type multiplicity
 lo_action->set_return_multiplicity( '1' ). "#EC NOTEXT
 ***********************************************************************************************************************************
+* Parameters
+***********************************************************************************************************************************
+
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'QueryId'    iv_abap_fieldname = 'QUERYID' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 32 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'ProfileId'    iv_abap_fieldname = 'PROFILEID' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 30 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'Page'    iv_abap_fieldname = 'PAGE' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_int32( ).
+lo_action->bind_input_structure( iv_structure_name  = 'ZCL_ZSU26_GW_MILO_MPC=>TS_RUNSAVEDQUERY' ). "#EC NOTEXT
+***********************************************************************************************************************************
 *   ACTION - SaveQuery
 ***********************************************************************************************************************************
 
@@ -274,6 +356,29 @@ lo_action->set_http_method( 'POST' ). "#EC NOTEXT
 * Set return type multiplicity
 lo_action->set_return_multiplicity( '1' ). "#EC NOTEXT
 ***********************************************************************************************************************************
+* Parameters
+***********************************************************************************************************************************
+
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'Visibility'    iv_abap_fieldname = 'VISIBILITY' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 10 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'Tags'    iv_abap_fieldname = 'TAGS' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 120 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'QueryText'    iv_abap_fieldname = 'QUERYTEXT' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 1024 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'QueryName'    iv_abap_fieldname = 'QUERYNAME' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 60 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'ProfileId'    iv_abap_fieldname = 'PROFILEID' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 30 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'Description'    iv_abap_fieldname = 'DESCRIPTION' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 255 ). "#EC NOTEXT
+lo_action->bind_input_structure( iv_structure_name  = 'ZCL_ZSU26_GW_MILO_MPC=>TS_SAVEQUERY' ). "#EC NOTEXT
+***********************************************************************************************************************************
 *   ACTION - SearchTables
 ***********************************************************************************************************************************
 
@@ -284,6 +389,67 @@ lo_action->set_return_entity_type( 'SqlwbTable' ). "#EC NOTEXT
 lo_action->set_http_method( 'GET' ). "#EC NOTEXT
 * Set return type multiplicity
 lo_action->set_return_multiplicity( 'M' ). "#EC NOTEXT
+***********************************************************************************************************************************
+* Parameters
+***********************************************************************************************************************************
+
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'MaxRows'    iv_abap_fieldname = 'MAXROWS' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_int32( ).
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'ProfileId'    iv_abap_fieldname = 'PROFILEID' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 30 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'SearchText'    iv_abap_fieldname = 'SEARCHTEXT' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 40 ). "#EC NOTEXT
+lo_action->bind_input_structure( iv_structure_name  = 'ZCL_ZSU26_GW_MILO_MPC=>TS_SEARCHTABLES' ). "#EC NOTEXT
+***********************************************************************************************************************************
+*   ACTION - DeleteSavedQuery
+***********************************************************************************************************************************
+
+lo_action = model->create_action( 'DeleteSavedQuery' ).  "#EC NOTEXT
+*Set return entity type
+lo_action->set_return_entity_type( 'SqlwbSaveQueryResult' ). "#EC NOTEXT
+*Set HTTP method GET or POST
+lo_action->set_http_method( 'POST' ). "#EC NOTEXT
+* Set return type multiplicity
+lo_action->set_return_multiplicity( '0' ). "#EC NOTEXT
+***********************************************************************************************************************************
+*   ACTION - UpdateSavedQuery
+***********************************************************************************************************************************
+
+lo_action = model->create_action( 'UpdateSavedQuery' ).  "#EC NOTEXT
+*Set return entity type
+lo_action->set_return_entity_type( 'SqlwbSaveQueryResult' ). "#EC NOTEXT
+*Set HTTP method GET or POST
+lo_action->set_http_method( 'POST' ). "#EC NOTEXT
+* Set return type multiplicity
+lo_action->set_return_multiplicity( '0' ). "#EC NOTEXT
+***********************************************************************************************************************************
+* Parameters
+***********************************************************************************************************************************
+
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'Description'    iv_abap_fieldname = 'DESCRIPTION' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 255 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'Visibility'    iv_abap_fieldname = 'VISIBILITY' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 10 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'Tags'    iv_abap_fieldname = 'TAGS' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 120 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'QueryText'    iv_abap_fieldname = 'QUERYTEXT' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 1024 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'QueryName'    iv_abap_fieldname = 'QUERYNAME' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 60 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'QueryId'    iv_abap_fieldname = 'QUERYID' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 32 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'ProfileId'    iv_abap_fieldname = 'PROFILEID' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 30 ). "#EC NOTEXT
+lo_action->bind_input_structure( iv_structure_name  = 'ZCL_ZSU26_GW_MILO_MPC=>TS_UPDATESAVEDQUERY' ). "#EC NOTEXT
   endmethod.
 
 
@@ -1324,7 +1490,7 @@ lo_entity_set->set_filter_required( abap_false ).
 *&---------------------------------------------------------------------*
 
 
-  CONSTANTS: lc_gen_date_time TYPE timestamp VALUE '20260709230126'.                  "#EC NOTEXT
+  CONSTANTS: lc_gen_date_time TYPE timestamp VALUE '20260721082523'.                  "#EC NOTEXT
   rv_last_modified = super->get_last_modified( ).
   IF rv_last_modified LT lc_gen_date_time.
     rv_last_modified = lc_gen_date_time.
