@@ -81,7 +81,7 @@
    <TABL_EXTRAS>
     <TDDAT>
      <TABNAME>ZMILO_WLIST</TABNAME>
-     <CCLASS>&amp;NC&amp;</CCLASS>
+     <CCLASS>ZSQL</CCLASS>
     </TDDAT>
    </TABL_EXTRAS>
   </asx:values>

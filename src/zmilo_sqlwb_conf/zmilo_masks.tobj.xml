@@ -28,7 +28,7 @@
    <TOBJ>
     <TDDAT>
      <TABNAME>ZMILO_MASK</TABNAME>
-     <CCLASS>&amp;NC&amp;</CCLASS>
+     <CCLASS>ZSQL</CCLASS>
     </TDDAT>
     <TVDIR>
      <TABNAME>ZMILO_MASK</TABNAME>
