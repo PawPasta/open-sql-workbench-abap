@@ -23,6 +23,79 @@ protected section.
 
   data mo_injection type ref to /IWBEP/IF_SB_GEN_DPC_INJECTION .
 
+  methods SQLWBUSERPROFILE_UPDATE_ENTITY
+    importing
+      !IV_ENTITY_NAME type STRING
+      !IV_ENTITY_SET_NAME type STRING
+      !IV_SOURCE_NAME type STRING
+      !IT_KEY_TAB type /IWBEP/T_MGW_NAME_VALUE_PAIR
+      !IO_TECH_REQUEST_CONTEXT type ref to /IWBEP/IF_MGW_REQ_ENTITY_U optional
+      !IT_NAVIGATION_PATH type /IWBEP/T_MGW_NAVIGATION_PATH
+      !IO_DATA_PROVIDER type ref to /IWBEP/IF_MGW_ENTRY_PROVIDER optional
+    exporting
+      !ER_ENTITY type ZCL_ZSU26_GW_MILO_MPC=>TS_SQLWBUSERPROFILE
+    raising
+      /IWBEP/CX_MGW_BUSI_EXCEPTION
+      /IWBEP/CX_MGW_TECH_EXCEPTION .
+  methods SQLWBUSERPROFILE_GET_ENTITYSET
+    importing
+      !IV_ENTITY_NAME type STRING
+      !IV_ENTITY_SET_NAME type STRING
+      !IV_SOURCE_NAME type STRING
+      !IT_FILTER_SELECT_OPTIONS type /IWBEP/T_MGW_SELECT_OPTION
+      !IS_PAGING type /IWBEP/S_MGW_PAGING
+      !IT_KEY_TAB type /IWBEP/T_MGW_NAME_VALUE_PAIR
+      !IT_NAVIGATION_PATH type /IWBEP/T_MGW_NAVIGATION_PATH
+      !IT_ORDER type /IWBEP/T_MGW_SORTING_ORDER
+      !IV_FILTER_STRING type STRING
+      !IV_SEARCH_STRING type STRING
+      !IO_TECH_REQUEST_CONTEXT type ref to /IWBEP/IF_MGW_REQ_ENTITYSET optional
+    exporting
+      !ET_ENTITYSET type ZCL_ZSU26_GW_MILO_MPC=>TT_SQLWBUSERPROFILE
+      !ES_RESPONSE_CONTEXT type /IWBEP/IF_MGW_APPL_SRV_RUNTIME=>TY_S_MGW_RESPONSE_CONTEXT
+    raising
+      /IWBEP/CX_MGW_BUSI_EXCEPTION
+      /IWBEP/CX_MGW_TECH_EXCEPTION .
+  methods SQLWBUSERPROFILE_GET_ENTITY
+    importing
+      !IV_ENTITY_NAME type STRING
+      !IV_ENTITY_SET_NAME type STRING
+      !IV_SOURCE_NAME type STRING
+      !IT_KEY_TAB type /IWBEP/T_MGW_NAME_VALUE_PAIR
+      !IO_REQUEST_OBJECT type ref to /IWBEP/IF_MGW_REQ_ENTITY optional
+      !IO_TECH_REQUEST_CONTEXT type ref to /IWBEP/IF_MGW_REQ_ENTITY optional
+      !IT_NAVIGATION_PATH type /IWBEP/T_MGW_NAVIGATION_PATH
+    exporting
+      !ER_ENTITY type ZCL_ZSU26_GW_MILO_MPC=>TS_SQLWBUSERPROFILE
+      !ES_RESPONSE_CONTEXT type /IWBEP/IF_MGW_APPL_SRV_RUNTIME=>TY_S_MGW_RESPONSE_ENTITY_CNTXT
+    raising
+      /IWBEP/CX_MGW_BUSI_EXCEPTION
+      /IWBEP/CX_MGW_TECH_EXCEPTION .
+  methods SQLWBUSERPROFILE_DELETE_ENTITY
+    importing
+      !IV_ENTITY_NAME type STRING
+      !IV_ENTITY_SET_NAME type STRING
+      !IV_SOURCE_NAME type STRING
+      !IT_KEY_TAB type /IWBEP/T_MGW_NAME_VALUE_PAIR
+      !IO_TECH_REQUEST_CONTEXT type ref to /IWBEP/IF_MGW_REQ_ENTITY_D optional
+      !IT_NAVIGATION_PATH type /IWBEP/T_MGW_NAVIGATION_PATH
+    raising
+      /IWBEP/CX_MGW_BUSI_EXCEPTION
+      /IWBEP/CX_MGW_TECH_EXCEPTION .
+  methods SQLWBUSERPROFILE_CREATE_ENTITY
+    importing
+      !IV_ENTITY_NAME type STRING
+      !IV_ENTITY_SET_NAME type STRING
+      !IV_SOURCE_NAME type STRING
+      !IT_KEY_TAB type /IWBEP/T_MGW_NAME_VALUE_PAIR
+      !IO_TECH_REQUEST_CONTEXT type ref to /IWBEP/IF_MGW_REQ_ENTITY_C optional
+      !IT_NAVIGATION_PATH type /IWBEP/T_MGW_NAVIGATION_PATH
+      !IO_DATA_PROVIDER type ref to /IWBEP/IF_MGW_ENTRY_PROVIDER optional
+    exporting
+      !ER_ENTITY type ZCL_ZSU26_GW_MILO_MPC=>TS_SQLWBUSERPROFILE
+    raising
+      /IWBEP/CX_MGW_BUSI_EXCEPTION
+      /IWBEP/CX_MGW_TECH_EXCEPTION .
   methods SQLWBTABLESET_UPDATE_ENTITY
     importing
       !IV_ENTITY_NAME type STRING
@@ -548,25 +621,95 @@ CLASS ZCL_ZSU26_GW_MILO_DPC IMPLEMENTATION.
   method /IWBEP/IF_MGW_APPL_SRV_RUNTIME~CREATE_ENTITY.
 *&----------------------------------------------------------------------------------------------*
 *&  Include           /IWBEP/DPC_TEMP_CRT_ENTITY_BASE
-*&* This class has been generated on 21.07.2026 15:25:25 in client 324
+*&* This class has been generated on 24.07.2026 05:22:04 in client 324
 *&*
 *&*       WARNING--> NEVER MODIFY THIS CLASS <--WARNING
 *&*   If you want to change the DPC implementation, use the
 *&*   generated methods inside the DPC provider subclass - ZCL_ZSU26_GW_MILO_DPC_EXT
 *&-----------------------------------------------------------------------------------------------*
 
- DATA sqlwbsavequeryre_create_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbsavequeryresult.
+ DATA sqlwbuserprofile_create_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbuserprofile.
  DATA sqlwbcolumnset_create_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbcolumn.
+ DATA sqlwbtableset_create_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbtable.
+ DATA sqlwbsavequeryre_create_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbsavequeryresult.
+ DATA sqlwbfieldset_create_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbfield.
  DATA sqlwbsavedquerys_create_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbsavedquery.
  DATA sqlwbrunresultse_create_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbrunresult.
- DATA sqlwbtableset_create_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbtable.
- DATA sqlwbfieldset_create_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbfield.
  DATA sqlwbpagechunkse_create_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbpagechunk.
  DATA lv_entityset_name TYPE string.
 
 lv_entityset_name = io_tech_request_context->get_entity_set_name( ).
 
 CASE lv_entityset_name.
+*-------------------------------------------------------------------------*
+*             EntitySet -  SqlwbUserProfileSet
+*-------------------------------------------------------------------------*
+     WHEN 'SqlwbUserProfileSet'.
+*     Call the entity set generated method
+    sqlwbuserprofile_create_entity(
+         EXPORTING iv_entity_name     = iv_entity_name
+                   iv_entity_set_name = iv_entity_set_name
+                   iv_source_name     = iv_source_name
+                   io_data_provider   = io_data_provider
+                   it_key_tab         = it_key_tab
+                   it_navigation_path = it_navigation_path
+                   io_tech_request_context = io_tech_request_context
+       	 IMPORTING er_entity          = sqlwbuserprofile_create_entity
+    ).
+*     Send specific entity data to the caller interfaces
+    copy_data_to_ref(
+      EXPORTING
+        is_data = sqlwbuserprofile_create_entity
+      CHANGING
+        cr_data = er_entity
+   ).
+
+*-------------------------------------------------------------------------*
+*             EntitySet -  SqlwbColumnSet
+*-------------------------------------------------------------------------*
+     WHEN 'SqlwbColumnSet'.
+*     Call the entity set generated method
+    sqlwbcolumnset_create_entity(
+         EXPORTING iv_entity_name     = iv_entity_name
+                   iv_entity_set_name = iv_entity_set_name
+                   iv_source_name     = iv_source_name
+                   io_data_provider   = io_data_provider
+                   it_key_tab         = it_key_tab
+                   it_navigation_path = it_navigation_path
+                   io_tech_request_context = io_tech_request_context
+       	 IMPORTING er_entity          = sqlwbcolumnset_create_entity
+    ).
+*     Send specific entity data to the caller interfaces
+    copy_data_to_ref(
+      EXPORTING
+        is_data = sqlwbcolumnset_create_entity
+      CHANGING
+        cr_data = er_entity
+   ).
+
+*-------------------------------------------------------------------------*
+*             EntitySet -  SqlwbTableSet
+*-------------------------------------------------------------------------*
+     WHEN 'SqlwbTableSet'.
+*     Call the entity set generated method
+    sqlwbtableset_create_entity(
+         EXPORTING iv_entity_name     = iv_entity_name
+                   iv_entity_set_name = iv_entity_set_name
+                   iv_source_name     = iv_source_name
+                   io_data_provider   = io_data_provider
+                   it_key_tab         = it_key_tab
+                   it_navigation_path = it_navigation_path
+                   io_tech_request_context = io_tech_request_context
+       	 IMPORTING er_entity          = sqlwbtableset_create_entity
+    ).
+*     Send specific entity data to the caller interfaces
+    copy_data_to_ref(
+      EXPORTING
+        is_data = sqlwbtableset_create_entity
+      CHANGING
+        cr_data = er_entity
+   ).
+
 *-------------------------------------------------------------------------*
 *             EntitySet -  SqlwbSaveQueryResultSet
 *-------------------------------------------------------------------------*
@@ -591,11 +734,11 @@ CASE lv_entityset_name.
    ).
 
 *-------------------------------------------------------------------------*
-*             EntitySet -  SqlwbColumnSet
+*             EntitySet -  SqlwbFieldSet
 *-------------------------------------------------------------------------*
-     WHEN 'SqlwbColumnSet'.
+     WHEN 'SqlwbFieldSet'.
 *     Call the entity set generated method
-    sqlwbcolumnset_create_entity(
+    sqlwbfieldset_create_entity(
          EXPORTING iv_entity_name     = iv_entity_name
                    iv_entity_set_name = iv_entity_set_name
                    iv_source_name     = iv_source_name
@@ -603,12 +746,12 @@ CASE lv_entityset_name.
                    it_key_tab         = it_key_tab
                    it_navigation_path = it_navigation_path
                    io_tech_request_context = io_tech_request_context
-       	 IMPORTING er_entity          = sqlwbcolumnset_create_entity
+       	 IMPORTING er_entity          = sqlwbfieldset_create_entity
     ).
 *     Send specific entity data to the caller interfaces
     copy_data_to_ref(
       EXPORTING
-        is_data = sqlwbcolumnset_create_entity
+        is_data = sqlwbfieldset_create_entity
       CHANGING
         cr_data = er_entity
    ).
@@ -660,52 +803,6 @@ CASE lv_entityset_name.
    ).
 
 *-------------------------------------------------------------------------*
-*             EntitySet -  SqlwbTableSet
-*-------------------------------------------------------------------------*
-     WHEN 'SqlwbTableSet'.
-*     Call the entity set generated method
-    sqlwbtableset_create_entity(
-         EXPORTING iv_entity_name     = iv_entity_name
-                   iv_entity_set_name = iv_entity_set_name
-                   iv_source_name     = iv_source_name
-                   io_data_provider   = io_data_provider
-                   it_key_tab         = it_key_tab
-                   it_navigation_path = it_navigation_path
-                   io_tech_request_context = io_tech_request_context
-       	 IMPORTING er_entity          = sqlwbtableset_create_entity
-    ).
-*     Send specific entity data to the caller interfaces
-    copy_data_to_ref(
-      EXPORTING
-        is_data = sqlwbtableset_create_entity
-      CHANGING
-        cr_data = er_entity
-   ).
-
-*-------------------------------------------------------------------------*
-*             EntitySet -  SqlwbFieldSet
-*-------------------------------------------------------------------------*
-     WHEN 'SqlwbFieldSet'.
-*     Call the entity set generated method
-    sqlwbfieldset_create_entity(
-         EXPORTING iv_entity_name     = iv_entity_name
-                   iv_entity_set_name = iv_entity_set_name
-                   iv_source_name     = iv_source_name
-                   io_data_provider   = io_data_provider
-                   it_key_tab         = it_key_tab
-                   it_navigation_path = it_navigation_path
-                   io_tech_request_context = io_tech_request_context
-       	 IMPORTING er_entity          = sqlwbfieldset_create_entity
-    ).
-*     Send specific entity data to the caller interfaces
-    copy_data_to_ref(
-      EXPORTING
-        is_data = sqlwbfieldset_create_entity
-      CHANGING
-        cr_data = er_entity
-   ).
-
-*-------------------------------------------------------------------------*
 *             EntitySet -  SqlwbPageChunkSet
 *-------------------------------------------------------------------------*
      WHEN 'SqlwbPageChunkSet'.
@@ -747,7 +844,7 @@ ENDCASE.
   method /IWBEP/IF_MGW_APPL_SRV_RUNTIME~DELETE_ENTITY.
 *&----------------------------------------------------------------------------------------------*
 *&  Include           /IWBEP/DPC_TEMP_DEL_ENTITY_BASE
-*&* This class has been generated on 21.07.2026 15:25:25 in client 324
+*&* This class has been generated on 24.07.2026 05:22:04 in client 324
 *&*
 *&*       WARNING--> NEVER MODIFY THIS CLASS <--WARNING
 *&*   If you want to change the DPC implementation, use the
@@ -759,6 +856,34 @@ ENDCASE.
 lv_entityset_name = io_tech_request_context->get_entity_set_name( ).
 
 CASE lv_entityset_name.
+*-------------------------------------------------------------------------*
+*             EntitySet -  SqlwbUserProfileSet
+*-------------------------------------------------------------------------*
+      when 'SqlwbUserProfileSet'.
+*     Call the entity set generated method
+     sqlwbuserprofile_delete_entity(
+          EXPORTING iv_entity_name     = iv_entity_name
+                    iv_entity_set_name = iv_entity_set_name
+                    iv_source_name     = iv_source_name
+                    it_key_tab         = it_key_tab
+                    it_navigation_path = it_navigation_path
+                    io_tech_request_context = io_tech_request_context
+     ).
+
+*-------------------------------------------------------------------------*
+*             EntitySet -  SqlwbTableSet
+*-------------------------------------------------------------------------*
+      when 'SqlwbTableSet'.
+*     Call the entity set generated method
+     sqlwbtableset_delete_entity(
+          EXPORTING iv_entity_name     = iv_entity_name
+                    iv_entity_set_name = iv_entity_set_name
+                    iv_source_name     = iv_source_name
+                    it_key_tab         = it_key_tab
+                    it_navigation_path = it_navigation_path
+                    io_tech_request_context = io_tech_request_context
+     ).
+
 *-------------------------------------------------------------------------*
 *             EntitySet -  SqlwbSaveQueryResultSet
 *-------------------------------------------------------------------------*
@@ -816,20 +941,6 @@ CASE lv_entityset_name.
      ).
 
 *-------------------------------------------------------------------------*
-*             EntitySet -  SqlwbFieldSet
-*-------------------------------------------------------------------------*
-      when 'SqlwbFieldSet'.
-*     Call the entity set generated method
-     sqlwbfieldset_delete_entity(
-          EXPORTING iv_entity_name     = iv_entity_name
-                    iv_entity_set_name = iv_entity_set_name
-                    iv_source_name     = iv_source_name
-                    it_key_tab         = it_key_tab
-                    it_navigation_path = it_navigation_path
-                    io_tech_request_context = io_tech_request_context
-     ).
-
-*-------------------------------------------------------------------------*
 *             EntitySet -  SqlwbColumnSet
 *-------------------------------------------------------------------------*
       when 'SqlwbColumnSet'.
@@ -844,11 +955,11 @@ CASE lv_entityset_name.
      ).
 
 *-------------------------------------------------------------------------*
-*             EntitySet -  SqlwbTableSet
+*             EntitySet -  SqlwbFieldSet
 *-------------------------------------------------------------------------*
-      when 'SqlwbTableSet'.
+      when 'SqlwbFieldSet'.
 *     Call the entity set generated method
-     sqlwbtableset_delete_entity(
+     sqlwbfieldset_delete_entity(
           EXPORTING iv_entity_name     = iv_entity_name
                     iv_entity_set_name = iv_entity_set_name
                     iv_source_name     = iv_source_name
@@ -873,20 +984,21 @@ CASE lv_entityset_name.
   method /IWBEP/IF_MGW_APPL_SRV_RUNTIME~GET_ENTITY.
 *&-----------------------------------------------------------------------------------------------*
 *&  Include           /IWBEP/DPC_TEMP_GETENTITY_BASE
-*&* This class has been generated  on 21.07.2026 15:25:25 in client 324
+*&* This class has been generated  on 24.07.2026 05:22:04 in client 324
 *&*
 *&*       WARNING--> NEVER MODIFY THIS CLASS <--WARNING
 *&*   If you want to change the DPC implementation, use the
 *&*   generated methods inside the DPC provider subclass - ZCL_ZSU26_GW_MILO_DPC_EXT
 *&-----------------------------------------------------------------------------------------------*
 
- DATA sqlwbpagechunkse_get_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbpagechunk.
- DATA sqlwbrunresultse_get_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbrunresult.
+ DATA sqlwbcolumnset_get_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbcolumn.
+ DATA sqlwbuserprofile_get_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbuserprofile.
  DATA sqlwbtableset_get_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbtable.
  DATA sqlwbfieldset_get_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbfield.
- DATA sqlwbsavedquerys_get_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbsavedquery.
  DATA sqlwbsavequeryre_get_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbsavequeryresult.
- DATA sqlwbcolumnset_get_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbcolumn.
+ DATA sqlwbsavedquerys_get_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbsavedquery.
+ DATA sqlwbpagechunkse_get_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbpagechunk.
+ DATA sqlwbrunresultse_get_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbrunresult.
  DATA lv_entityset_name TYPE string.
  DATA lr_entity TYPE REF TO data.       "#EC NEEDED
 
@@ -894,26 +1006,26 @@ lv_entityset_name = io_tech_request_context->get_entity_set_name( ).
 
 CASE lv_entityset_name.
 *-------------------------------------------------------------------------*
-*             EntitySet -  SqlwbPageChunkSet
+*             EntitySet -  SqlwbColumnSet
 *-------------------------------------------------------------------------*
-      WHEN 'SqlwbPageChunkSet'.
+      WHEN 'SqlwbColumnSet'.
 *     Call the entity set generated method
-          sqlwbpagechunkse_get_entity(
+          sqlwbcolumnset_get_entity(
                EXPORTING iv_entity_name     = iv_entity_name
                          iv_entity_set_name = iv_entity_set_name
                          iv_source_name     = iv_source_name
                          it_key_tab         = it_key_tab
                          it_navigation_path = it_navigation_path
                          io_tech_request_context = io_tech_request_context
-             	 IMPORTING er_entity          = sqlwbpagechunkse_get_entity
+             	 IMPORTING er_entity          = sqlwbcolumnset_get_entity
                          es_response_context = es_response_context
           ).
 
-        IF sqlwbpagechunkse_get_entity IS NOT INITIAL.
+        IF sqlwbcolumnset_get_entity IS NOT INITIAL.
 *     Send specific entity data to the caller interface
           copy_data_to_ref(
             EXPORTING
-              is_data = sqlwbpagechunkse_get_entity
+              is_data = sqlwbcolumnset_get_entity
             CHANGING
               cr_data = er_entity
           ).
@@ -922,26 +1034,26 @@ CASE lv_entityset_name.
           er_entity = lr_entity.
         ENDIF.
 *-------------------------------------------------------------------------*
-*             EntitySet -  SqlwbRunResultSet
+*             EntitySet -  SqlwbUserProfileSet
 *-------------------------------------------------------------------------*
-      WHEN 'SqlwbRunResultSet'.
+      WHEN 'SqlwbUserProfileSet'.
 *     Call the entity set generated method
-          sqlwbrunresultse_get_entity(
+          sqlwbuserprofile_get_entity(
                EXPORTING iv_entity_name     = iv_entity_name
                          iv_entity_set_name = iv_entity_set_name
                          iv_source_name     = iv_source_name
                          it_key_tab         = it_key_tab
                          it_navigation_path = it_navigation_path
                          io_tech_request_context = io_tech_request_context
-             	 IMPORTING er_entity          = sqlwbrunresultse_get_entity
+             	 IMPORTING er_entity          = sqlwbuserprofile_get_entity
                          es_response_context = es_response_context
           ).
 
-        IF sqlwbrunresultse_get_entity IS NOT INITIAL.
+        IF sqlwbuserprofile_get_entity IS NOT INITIAL.
 *     Send specific entity data to the caller interface
           copy_data_to_ref(
             EXPORTING
-              is_data = sqlwbrunresultse_get_entity
+              is_data = sqlwbuserprofile_get_entity
             CHANGING
               cr_data = er_entity
           ).
@@ -1006,34 +1118,6 @@ CASE lv_entityset_name.
           er_entity = lr_entity.
         ENDIF.
 *-------------------------------------------------------------------------*
-*             EntitySet -  SqlwbSavedQuerySet
-*-------------------------------------------------------------------------*
-      WHEN 'SqlwbSavedQuerySet'.
-*     Call the entity set generated method
-          sqlwbsavedquerys_get_entity(
-               EXPORTING iv_entity_name     = iv_entity_name
-                         iv_entity_set_name = iv_entity_set_name
-                         iv_source_name     = iv_source_name
-                         it_key_tab         = it_key_tab
-                         it_navigation_path = it_navigation_path
-                         io_tech_request_context = io_tech_request_context
-             	 IMPORTING er_entity          = sqlwbsavedquerys_get_entity
-                         es_response_context = es_response_context
-          ).
-
-        IF sqlwbsavedquerys_get_entity IS NOT INITIAL.
-*     Send specific entity data to the caller interface
-          copy_data_to_ref(
-            EXPORTING
-              is_data = sqlwbsavedquerys_get_entity
-            CHANGING
-              cr_data = er_entity
-          ).
-        ELSE.
-*         In case of initial values - unbind the entity reference
-          er_entity = lr_entity.
-        ENDIF.
-*-------------------------------------------------------------------------*
 *             EntitySet -  SqlwbSaveQueryResultSet
 *-------------------------------------------------------------------------*
       WHEN 'SqlwbSaveQueryResultSet'.
@@ -1062,26 +1146,82 @@ CASE lv_entityset_name.
           er_entity = lr_entity.
         ENDIF.
 *-------------------------------------------------------------------------*
-*             EntitySet -  SqlwbColumnSet
+*             EntitySet -  SqlwbSavedQuerySet
 *-------------------------------------------------------------------------*
-      WHEN 'SqlwbColumnSet'.
+      WHEN 'SqlwbSavedQuerySet'.
 *     Call the entity set generated method
-          sqlwbcolumnset_get_entity(
+          sqlwbsavedquerys_get_entity(
                EXPORTING iv_entity_name     = iv_entity_name
                          iv_entity_set_name = iv_entity_set_name
                          iv_source_name     = iv_source_name
                          it_key_tab         = it_key_tab
                          it_navigation_path = it_navigation_path
                          io_tech_request_context = io_tech_request_context
-             	 IMPORTING er_entity          = sqlwbcolumnset_get_entity
+             	 IMPORTING er_entity          = sqlwbsavedquerys_get_entity
                          es_response_context = es_response_context
           ).
 
-        IF sqlwbcolumnset_get_entity IS NOT INITIAL.
+        IF sqlwbsavedquerys_get_entity IS NOT INITIAL.
 *     Send specific entity data to the caller interface
           copy_data_to_ref(
             EXPORTING
-              is_data = sqlwbcolumnset_get_entity
+              is_data = sqlwbsavedquerys_get_entity
+            CHANGING
+              cr_data = er_entity
+          ).
+        ELSE.
+*         In case of initial values - unbind the entity reference
+          er_entity = lr_entity.
+        ENDIF.
+*-------------------------------------------------------------------------*
+*             EntitySet -  SqlwbPageChunkSet
+*-------------------------------------------------------------------------*
+      WHEN 'SqlwbPageChunkSet'.
+*     Call the entity set generated method
+          sqlwbpagechunkse_get_entity(
+               EXPORTING iv_entity_name     = iv_entity_name
+                         iv_entity_set_name = iv_entity_set_name
+                         iv_source_name     = iv_source_name
+                         it_key_tab         = it_key_tab
+                         it_navigation_path = it_navigation_path
+                         io_tech_request_context = io_tech_request_context
+             	 IMPORTING er_entity          = sqlwbpagechunkse_get_entity
+                         es_response_context = es_response_context
+          ).
+
+        IF sqlwbpagechunkse_get_entity IS NOT INITIAL.
+*     Send specific entity data to the caller interface
+          copy_data_to_ref(
+            EXPORTING
+              is_data = sqlwbpagechunkse_get_entity
+            CHANGING
+              cr_data = er_entity
+          ).
+        ELSE.
+*         In case of initial values - unbind the entity reference
+          er_entity = lr_entity.
+        ENDIF.
+*-------------------------------------------------------------------------*
+*             EntitySet -  SqlwbRunResultSet
+*-------------------------------------------------------------------------*
+      WHEN 'SqlwbRunResultSet'.
+*     Call the entity set generated method
+          sqlwbrunresultse_get_entity(
+               EXPORTING iv_entity_name     = iv_entity_name
+                         iv_entity_set_name = iv_entity_set_name
+                         iv_source_name     = iv_source_name
+                         it_key_tab         = it_key_tab
+                         it_navigation_path = it_navigation_path
+                         io_tech_request_context = io_tech_request_context
+             	 IMPORTING er_entity          = sqlwbrunresultse_get_entity
+                         es_response_context = es_response_context
+          ).
+
+        IF sqlwbrunresultse_get_entity IS NOT INITIAL.
+*     Send specific entity data to the caller interface
+          copy_data_to_ref(
+            EXPORTING
+              is_data = sqlwbrunresultse_get_entity
             CHANGING
               cr_data = er_entity
           ).
@@ -1108,30 +1248,31 @@ CASE lv_entityset_name.
   method /IWBEP/IF_MGW_APPL_SRV_RUNTIME~GET_ENTITYSET.
 *&----------------------------------------------------------------------------------------------*
 *&  Include           /IWBEP/DPC_TMP_ENTITYSET_BASE
-*&* This class has been generated on 21.07.2026 15:25:25 in client 324
+*&* This class has been generated on 24.07.2026 05:22:04 in client 324
 *&*
 *&*       WARNING--> NEVER MODIFY THIS CLASS <--WARNING
 *&*   If you want to change the DPC implementation, use the
 *&*   generated methods inside the DPC provider subclass - ZCL_ZSU26_GW_MILO_DPC_EXT
 *&-----------------------------------------------------------------------------------------------*
- DATA sqlwbpagechunkse_get_entityset TYPE zcl_zsu26_gw_milo_mpc=>tt_sqlwbpagechunk.
+ DATA sqlwbcolumnset_get_entityset TYPE zcl_zsu26_gw_milo_mpc=>tt_sqlwbcolumn.
  DATA sqlwbrunresultse_get_entityset TYPE zcl_zsu26_gw_milo_mpc=>tt_sqlwbrunresult.
- DATA sqlwbfieldset_get_entityset TYPE zcl_zsu26_gw_milo_mpc=>tt_sqlwbfield.
+ DATA sqlwbuserprofile_get_entityset TYPE zcl_zsu26_gw_milo_mpc=>tt_sqlwbuserprofile.
+ DATA sqlwbpagechunkse_get_entityset TYPE zcl_zsu26_gw_milo_mpc=>tt_sqlwbpagechunk.
  DATA sqlwbsavedquerys_get_entityset TYPE zcl_zsu26_gw_milo_mpc=>tt_sqlwbsavedquery.
  DATA sqlwbtableset_get_entityset TYPE zcl_zsu26_gw_milo_mpc=>tt_sqlwbtable.
  DATA sqlwbsavequeryre_get_entityset TYPE zcl_zsu26_gw_milo_mpc=>tt_sqlwbsavequeryresult.
- DATA sqlwbcolumnset_get_entityset TYPE zcl_zsu26_gw_milo_mpc=>tt_sqlwbcolumn.
+ DATA sqlwbfieldset_get_entityset TYPE zcl_zsu26_gw_milo_mpc=>tt_sqlwbfield.
  DATA lv_entityset_name TYPE string.
 
 lv_entityset_name = io_tech_request_context->get_entity_set_name( ).
 
 CASE lv_entityset_name.
 *-------------------------------------------------------------------------*
-*             EntitySet -  SqlwbPageChunkSet
+*             EntitySet -  SqlwbColumnSet
 *-------------------------------------------------------------------------*
-   WHEN 'SqlwbPageChunkSet'.
+   WHEN 'SqlwbColumnSet'.
 *     Call the entity set generated method
-      sqlwbpagechunkse_get_entityset(
+      sqlwbcolumnset_get_entityset(
         EXPORTING
          iv_entity_name = iv_entity_name
          iv_entity_set_name = iv_entity_set_name
@@ -1145,13 +1286,13 @@ CASE lv_entityset_name.
          iv_search_string = iv_search_string
          io_tech_request_context = io_tech_request_context
        IMPORTING
-         et_entityset = sqlwbpagechunkse_get_entityset
+         et_entityset = sqlwbcolumnset_get_entityset
          es_response_context = es_response_context
        ).
 *     Send specific entity data to the caller interface
       copy_data_to_ref(
         EXPORTING
-          is_data = sqlwbpagechunkse_get_entityset
+          is_data = sqlwbcolumnset_get_entityset
         CHANGING
           cr_data = er_entityset
       ).
@@ -1187,11 +1328,11 @@ CASE lv_entityset_name.
       ).
 
 *-------------------------------------------------------------------------*
-*             EntitySet -  SqlwbFieldSet
+*             EntitySet -  SqlwbUserProfileSet
 *-------------------------------------------------------------------------*
-   WHEN 'SqlwbFieldSet'.
+   WHEN 'SqlwbUserProfileSet'.
 *     Call the entity set generated method
-      sqlwbfieldset_get_entityset(
+      sqlwbuserprofile_get_entityset(
         EXPORTING
          iv_entity_name = iv_entity_name
          iv_entity_set_name = iv_entity_set_name
@@ -1205,13 +1346,43 @@ CASE lv_entityset_name.
          iv_search_string = iv_search_string
          io_tech_request_context = io_tech_request_context
        IMPORTING
-         et_entityset = sqlwbfieldset_get_entityset
+         et_entityset = sqlwbuserprofile_get_entityset
          es_response_context = es_response_context
        ).
 *     Send specific entity data to the caller interface
       copy_data_to_ref(
         EXPORTING
-          is_data = sqlwbfieldset_get_entityset
+          is_data = sqlwbuserprofile_get_entityset
+        CHANGING
+          cr_data = er_entityset
+      ).
+
+*-------------------------------------------------------------------------*
+*             EntitySet -  SqlwbPageChunkSet
+*-------------------------------------------------------------------------*
+   WHEN 'SqlwbPageChunkSet'.
+*     Call the entity set generated method
+      sqlwbpagechunkse_get_entityset(
+        EXPORTING
+         iv_entity_name = iv_entity_name
+         iv_entity_set_name = iv_entity_set_name
+         iv_source_name = iv_source_name
+         it_filter_select_options = it_filter_select_options
+         it_order = it_order
+         is_paging = is_paging
+         it_navigation_path = it_navigation_path
+         it_key_tab = it_key_tab
+         iv_filter_string = iv_filter_string
+         iv_search_string = iv_search_string
+         io_tech_request_context = io_tech_request_context
+       IMPORTING
+         et_entityset = sqlwbpagechunkse_get_entityset
+         es_response_context = es_response_context
+       ).
+*     Send specific entity data to the caller interface
+      copy_data_to_ref(
+        EXPORTING
+          is_data = sqlwbpagechunkse_get_entityset
         CHANGING
           cr_data = er_entityset
       ).
@@ -1307,11 +1478,11 @@ CASE lv_entityset_name.
       ).
 
 *-------------------------------------------------------------------------*
-*             EntitySet -  SqlwbColumnSet
+*             EntitySet -  SqlwbFieldSet
 *-------------------------------------------------------------------------*
-   WHEN 'SqlwbColumnSet'.
+   WHEN 'SqlwbFieldSet'.
 *     Call the entity set generated method
-      sqlwbcolumnset_get_entityset(
+      sqlwbfieldset_get_entityset(
         EXPORTING
          iv_entity_name = iv_entity_name
          iv_entity_set_name = iv_entity_set_name
@@ -1325,13 +1496,13 @@ CASE lv_entityset_name.
          iv_search_string = iv_search_string
          io_tech_request_context = io_tech_request_context
        IMPORTING
-         et_entityset = sqlwbcolumnset_get_entityset
+         et_entityset = sqlwbfieldset_get_entityset
          es_response_context = es_response_context
        ).
 *     Send specific entity data to the caller interface
       copy_data_to_ref(
         EXPORTING
-          is_data = sqlwbcolumnset_get_entityset
+          is_data = sqlwbfieldset_get_entityset
         CHANGING
           cr_data = er_entityset
       ).
@@ -1359,53 +1530,27 @@ CASE lv_entityset_name.
   method /IWBEP/IF_MGW_APPL_SRV_RUNTIME~UPDATE_ENTITY.
 *&----------------------------------------------------------------------------------------------*
 *&  Include           /IWBEP/DPC_TEMP_UPD_ENTITY_BASE
-*&* This class has been generated on 21.07.2026 15:25:25 in client 324
+*&* This class has been generated on 24.07.2026 05:22:04 in client 324
 *&*
 *&*       WARNING--> NEVER MODIFY THIS CLASS <--WARNING
 *&*   If you want to change the DPC implementation, use the
 *&*   generated methods inside the DPC provider subclass - ZCL_ZSU26_GW_MILO_DPC_EXT
 *&-----------------------------------------------------------------------------------------------*
 
- DATA sqlwbtableset_update_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbtable.
  DATA sqlwbsavequeryre_update_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbsavequeryresult.
- DATA sqlwbsavedquerys_update_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbsavedquery.
- DATA sqlwbrunresultse_update_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbrunresult.
- DATA sqlwbpagechunkse_update_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbpagechunk.
  DATA sqlwbfieldset_update_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbfield.
+ DATA sqlwbsavedquerys_update_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbsavedquery.
+ DATA sqlwbtableset_update_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbtable.
  DATA sqlwbcolumnset_update_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbcolumn.
+ DATA sqlwbrunresultse_update_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbrunresult.
+ DATA sqlwbuserprofile_update_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbuserprofile.
+ DATA sqlwbpagechunkse_update_entity TYPE zcl_zsu26_gw_milo_mpc=>ts_sqlwbpagechunk.
  DATA lv_entityset_name TYPE string.
  DATA lr_entity TYPE REF TO data. "#EC NEEDED
 
 lv_entityset_name = io_tech_request_context->get_entity_set_name( ).
 
 CASE lv_entityset_name.
-*-------------------------------------------------------------------------*
-*             EntitySet -  SqlwbTableSet
-*-------------------------------------------------------------------------*
-      WHEN 'SqlwbTableSet'.
-*     Call the entity set generated method
-          sqlwbtableset_update_entity(
-               EXPORTING iv_entity_name     = iv_entity_name
-                         iv_entity_set_name = iv_entity_set_name
-                         iv_source_name     = iv_source_name
-                         io_data_provider   = io_data_provider
-                         it_key_tab         = it_key_tab
-                         it_navigation_path = it_navigation_path
-                         io_tech_request_context = io_tech_request_context
-             	 IMPORTING er_entity          = sqlwbtableset_update_entity
-          ).
-       IF sqlwbtableset_update_entity IS NOT INITIAL.
-*     Send specific entity data to the caller interface
-          copy_data_to_ref(
-            EXPORTING
-              is_data = sqlwbtableset_update_entity
-            CHANGING
-              cr_data = er_entity
-          ).
-        ELSE.
-*         In case of initial values - unbind the entity reference
-          er_entity = lr_entity.
-        ENDIF.
 *-------------------------------------------------------------------------*
 *             EntitySet -  SqlwbSaveQueryResultSet
 *-------------------------------------------------------------------------*
@@ -1426,87 +1571,6 @@ CASE lv_entityset_name.
           copy_data_to_ref(
             EXPORTING
               is_data = sqlwbsavequeryre_update_entity
-            CHANGING
-              cr_data = er_entity
-          ).
-        ELSE.
-*         In case of initial values - unbind the entity reference
-          er_entity = lr_entity.
-        ENDIF.
-*-------------------------------------------------------------------------*
-*             EntitySet -  SqlwbSavedQuerySet
-*-------------------------------------------------------------------------*
-      WHEN 'SqlwbSavedQuerySet'.
-*     Call the entity set generated method
-          sqlwbsavedquerys_update_entity(
-               EXPORTING iv_entity_name     = iv_entity_name
-                         iv_entity_set_name = iv_entity_set_name
-                         iv_source_name     = iv_source_name
-                         io_data_provider   = io_data_provider
-                         it_key_tab         = it_key_tab
-                         it_navigation_path = it_navigation_path
-                         io_tech_request_context = io_tech_request_context
-             	 IMPORTING er_entity          = sqlwbsavedquerys_update_entity
-          ).
-       IF sqlwbsavedquerys_update_entity IS NOT INITIAL.
-*     Send specific entity data to the caller interface
-          copy_data_to_ref(
-            EXPORTING
-              is_data = sqlwbsavedquerys_update_entity
-            CHANGING
-              cr_data = er_entity
-          ).
-        ELSE.
-*         In case of initial values - unbind the entity reference
-          er_entity = lr_entity.
-        ENDIF.
-*-------------------------------------------------------------------------*
-*             EntitySet -  SqlwbRunResultSet
-*-------------------------------------------------------------------------*
-      WHEN 'SqlwbRunResultSet'.
-*     Call the entity set generated method
-          sqlwbrunresultse_update_entity(
-               EXPORTING iv_entity_name     = iv_entity_name
-                         iv_entity_set_name = iv_entity_set_name
-                         iv_source_name     = iv_source_name
-                         io_data_provider   = io_data_provider
-                         it_key_tab         = it_key_tab
-                         it_navigation_path = it_navigation_path
-                         io_tech_request_context = io_tech_request_context
-             	 IMPORTING er_entity          = sqlwbrunresultse_update_entity
-          ).
-       IF sqlwbrunresultse_update_entity IS NOT INITIAL.
-*     Send specific entity data to the caller interface
-          copy_data_to_ref(
-            EXPORTING
-              is_data = sqlwbrunresultse_update_entity
-            CHANGING
-              cr_data = er_entity
-          ).
-        ELSE.
-*         In case of initial values - unbind the entity reference
-          er_entity = lr_entity.
-        ENDIF.
-*-------------------------------------------------------------------------*
-*             EntitySet -  SqlwbPageChunkSet
-*-------------------------------------------------------------------------*
-      WHEN 'SqlwbPageChunkSet'.
-*     Call the entity set generated method
-          sqlwbpagechunkse_update_entity(
-               EXPORTING iv_entity_name     = iv_entity_name
-                         iv_entity_set_name = iv_entity_set_name
-                         iv_source_name     = iv_source_name
-                         io_data_provider   = io_data_provider
-                         it_key_tab         = it_key_tab
-                         it_navigation_path = it_navigation_path
-                         io_tech_request_context = io_tech_request_context
-             	 IMPORTING er_entity          = sqlwbpagechunkse_update_entity
-          ).
-       IF sqlwbpagechunkse_update_entity IS NOT INITIAL.
-*     Send specific entity data to the caller interface
-          copy_data_to_ref(
-            EXPORTING
-              is_data = sqlwbpagechunkse_update_entity
             CHANGING
               cr_data = er_entity
           ).
@@ -1542,6 +1606,60 @@ CASE lv_entityset_name.
           er_entity = lr_entity.
         ENDIF.
 *-------------------------------------------------------------------------*
+*             EntitySet -  SqlwbSavedQuerySet
+*-------------------------------------------------------------------------*
+      WHEN 'SqlwbSavedQuerySet'.
+*     Call the entity set generated method
+          sqlwbsavedquerys_update_entity(
+               EXPORTING iv_entity_name     = iv_entity_name
+                         iv_entity_set_name = iv_entity_set_name
+                         iv_source_name     = iv_source_name
+                         io_data_provider   = io_data_provider
+                         it_key_tab         = it_key_tab
+                         it_navigation_path = it_navigation_path
+                         io_tech_request_context = io_tech_request_context
+             	 IMPORTING er_entity          = sqlwbsavedquerys_update_entity
+          ).
+       IF sqlwbsavedquerys_update_entity IS NOT INITIAL.
+*     Send specific entity data to the caller interface
+          copy_data_to_ref(
+            EXPORTING
+              is_data = sqlwbsavedquerys_update_entity
+            CHANGING
+              cr_data = er_entity
+          ).
+        ELSE.
+*         In case of initial values - unbind the entity reference
+          er_entity = lr_entity.
+        ENDIF.
+*-------------------------------------------------------------------------*
+*             EntitySet -  SqlwbTableSet
+*-------------------------------------------------------------------------*
+      WHEN 'SqlwbTableSet'.
+*     Call the entity set generated method
+          sqlwbtableset_update_entity(
+               EXPORTING iv_entity_name     = iv_entity_name
+                         iv_entity_set_name = iv_entity_set_name
+                         iv_source_name     = iv_source_name
+                         io_data_provider   = io_data_provider
+                         it_key_tab         = it_key_tab
+                         it_navigation_path = it_navigation_path
+                         io_tech_request_context = io_tech_request_context
+             	 IMPORTING er_entity          = sqlwbtableset_update_entity
+          ).
+       IF sqlwbtableset_update_entity IS NOT INITIAL.
+*     Send specific entity data to the caller interface
+          copy_data_to_ref(
+            EXPORTING
+              is_data = sqlwbtableset_update_entity
+            CHANGING
+              cr_data = er_entity
+          ).
+        ELSE.
+*         In case of initial values - unbind the entity reference
+          er_entity = lr_entity.
+        ENDIF.
+*-------------------------------------------------------------------------*
 *             EntitySet -  SqlwbColumnSet
 *-------------------------------------------------------------------------*
       WHEN 'SqlwbColumnSet'.
@@ -1561,6 +1679,87 @@ CASE lv_entityset_name.
           copy_data_to_ref(
             EXPORTING
               is_data = sqlwbcolumnset_update_entity
+            CHANGING
+              cr_data = er_entity
+          ).
+        ELSE.
+*         In case of initial values - unbind the entity reference
+          er_entity = lr_entity.
+        ENDIF.
+*-------------------------------------------------------------------------*
+*             EntitySet -  SqlwbRunResultSet
+*-------------------------------------------------------------------------*
+      WHEN 'SqlwbRunResultSet'.
+*     Call the entity set generated method
+          sqlwbrunresultse_update_entity(
+               EXPORTING iv_entity_name     = iv_entity_name
+                         iv_entity_set_name = iv_entity_set_name
+                         iv_source_name     = iv_source_name
+                         io_data_provider   = io_data_provider
+                         it_key_tab         = it_key_tab
+                         it_navigation_path = it_navigation_path
+                         io_tech_request_context = io_tech_request_context
+             	 IMPORTING er_entity          = sqlwbrunresultse_update_entity
+          ).
+       IF sqlwbrunresultse_update_entity IS NOT INITIAL.
+*     Send specific entity data to the caller interface
+          copy_data_to_ref(
+            EXPORTING
+              is_data = sqlwbrunresultse_update_entity
+            CHANGING
+              cr_data = er_entity
+          ).
+        ELSE.
+*         In case of initial values - unbind the entity reference
+          er_entity = lr_entity.
+        ENDIF.
+*-------------------------------------------------------------------------*
+*             EntitySet -  SqlwbUserProfileSet
+*-------------------------------------------------------------------------*
+      WHEN 'SqlwbUserProfileSet'.
+*     Call the entity set generated method
+          sqlwbuserprofile_update_entity(
+               EXPORTING iv_entity_name     = iv_entity_name
+                         iv_entity_set_name = iv_entity_set_name
+                         iv_source_name     = iv_source_name
+                         io_data_provider   = io_data_provider
+                         it_key_tab         = it_key_tab
+                         it_navigation_path = it_navigation_path
+                         io_tech_request_context = io_tech_request_context
+             	 IMPORTING er_entity          = sqlwbuserprofile_update_entity
+          ).
+       IF sqlwbuserprofile_update_entity IS NOT INITIAL.
+*     Send specific entity data to the caller interface
+          copy_data_to_ref(
+            EXPORTING
+              is_data = sqlwbuserprofile_update_entity
+            CHANGING
+              cr_data = er_entity
+          ).
+        ELSE.
+*         In case of initial values - unbind the entity reference
+          er_entity = lr_entity.
+        ENDIF.
+*-------------------------------------------------------------------------*
+*             EntitySet -  SqlwbPageChunkSet
+*-------------------------------------------------------------------------*
+      WHEN 'SqlwbPageChunkSet'.
+*     Call the entity set generated method
+          sqlwbpagechunkse_update_entity(
+               EXPORTING iv_entity_name     = iv_entity_name
+                         iv_entity_set_name = iv_entity_set_name
+                         iv_source_name     = iv_source_name
+                         io_data_provider   = io_data_provider
+                         it_key_tab         = it_key_tab
+                         it_navigation_path = it_navigation_path
+                         io_tech_request_context = io_tech_request_context
+             	 IMPORTING er_entity          = sqlwbpagechunkse_update_entity
+          ).
+       IF sqlwbpagechunkse_update_entity IS NOT INITIAL.
+*     Send specific entity data to the caller interface
+          copy_data_to_ref(
+            EXPORTING
+              is_data = sqlwbpagechunkse_update_entity
             CHANGING
               cr_data = er_entity
           ).
@@ -1980,5 +2179,45 @@ lo_logger = /iwbep/if_mgw_conv_srv_runtime~get_logger( ).
     EXPORTING
       textid = /iwbep/cx_mgw_not_impl_exc=>method_not_implemented
       method = 'SQLWBTABLESET_UPDATE_ENTITY'.
+  endmethod.
+
+
+  method SQLWBUSERPROFILE_CREATE_ENTITY.
+  RAISE EXCEPTION TYPE /iwbep/cx_mgw_not_impl_exc
+    EXPORTING
+      textid = /iwbep/cx_mgw_not_impl_exc=>method_not_implemented
+      method = 'SQLWBUSERPROFILE_CREATE_ENTITY'.
+  endmethod.
+
+
+  method SQLWBUSERPROFILE_DELETE_ENTITY.
+  RAISE EXCEPTION TYPE /iwbep/cx_mgw_not_impl_exc
+    EXPORTING
+      textid = /iwbep/cx_mgw_not_impl_exc=>method_not_implemented
+      method = 'SQLWBUSERPROFILE_DELETE_ENTITY'.
+  endmethod.
+
+
+  method SQLWBUSERPROFILE_GET_ENTITY.
+  RAISE EXCEPTION TYPE /iwbep/cx_mgw_not_impl_exc
+    EXPORTING
+      textid = /iwbep/cx_mgw_not_impl_exc=>method_not_implemented
+      method = 'SQLWBUSERPROFILE_GET_ENTITY'.
+  endmethod.
+
+
+  method SQLWBUSERPROFILE_GET_ENTITYSET.
+  RAISE EXCEPTION TYPE /iwbep/cx_mgw_not_impl_exc
+    EXPORTING
+      textid = /iwbep/cx_mgw_not_impl_exc=>method_not_implemented
+      method = 'SQLWBUSERPROFILE_GET_ENTITYSET'.
+  endmethod.
+
+
+  method SQLWBUSERPROFILE_UPDATE_ENTITY.
+  RAISE EXCEPTION TYPE /iwbep/cx_mgw_not_impl_exc
+    EXPORTING
+      textid = /iwbep/cx_mgw_not_impl_exc=>method_not_implemented
+      method = 'SQLWBUSERPROFILE_UPDATE_ENTITY'.
   endmethod.
 ENDCLASS.
