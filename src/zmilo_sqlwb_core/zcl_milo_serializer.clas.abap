@@ -73,6 +73,10 @@ CLASS ZCL_MILO_SERIALIZER IMPLEMENTATION.
     DATA lv_leng_i     TYPE i.
     DATA lv_decimals_i TYPE i.
     DATA lv_key       TYPE string.
+    DATA lv_origin_type TYPE string.
+    DATA lv_origin_structure TYPE string.
+    DATA lv_include_depth TYPE string.
+    DATA lv_include_depth_i TYPE i.
 
     LOOP AT it_field INTO DATA(ls_field).
 
@@ -80,19 +84,26 @@ CLASS ZCL_MILO_SERIALIZER IMPLEMENTATION.
       lv_rollname  = ls_field-rollname.
       lv_datatype  = ls_field-datatype.
       lv_ddtext    = ls_field-ddtext.
+      lv_origin_type = ls_field-origin_type.
+      lv_origin_structure = ls_field-origin_structure.
       lv_json_key  = to_lower( lv_fieldname ).
       lv_position_i = ls_field-position.
       lv_leng_i     = ls_field-leng.
       lv_decimals_i = ls_field-decimals.
+      lv_include_depth_i = ls_field-include_depth.
       lv_position   = lv_position_i.
       lv_leng       = lv_leng_i.
       lv_decimals   = lv_decimals_i.
+      lv_include_depth = lv_include_depth_i.
 
       lv_fieldname = escape_json_string( lv_fieldname ).
       lv_json_key  = escape_json_string( lv_json_key ).
       lv_rollname  = escape_json_string( lv_rollname ).
       lv_datatype  = escape_json_string( lv_datatype ).
       lv_ddtext    = escape_json_string( lv_ddtext ).
+      lv_origin_type = escape_json_string( lv_origin_type ).
+      lv_origin_structure = escape_json_string( lv_origin_structure ).
+
 
       lv_key = 'false'.
       IF ls_field-keyflag = abap_true OR ls_field-keyflag = 'X'.
@@ -108,7 +119,10 @@ CLASS ZCL_MILO_SERIALIZER IMPLEMENTATION.
         '","length":' && lv_leng &&
         ',"decimals":' && lv_decimals &&
         ',"isKey":' && lv_key &&
-        ',"label":"' && lv_ddtext && '"}'.
+                ',"label":"' && lv_ddtext &&
+        '","originType":"' && lv_origin_type &&
+        '","originStructure":"' && lv_origin_structure &&
+        '","includeDepth":' && lv_include_depth && '}'.
 
       APPEND lv_row_json TO lt_json_rows.
 
@@ -144,6 +158,10 @@ CLASS ZCL_MILO_SERIALIZER IMPLEMENTATION.
     DATA lv_position_i TYPE i.
     DATA lv_length_i   TYPE i.
     DATA lv_decimals_i TYPE i.
+    DATA lv_origin_type TYPE string.
+    DATA lv_origin_structure TYPE string.
+    DATA lv_include_depth TYPE string.
+    DATA lv_include_depth_i TYPE i.
 
     LOOP AT it_column INTO DATA(ls_column).
 
@@ -152,18 +170,25 @@ CLASS ZCL_MILO_SERIALIZER IMPLEMENTATION.
       lv_element   = ls_column-element.
       lv_abap_type = ls_column-abap_type.
       lv_label     = ls_column-column_label.
+      lv_origin_type = ls_column-origin_type.
+      lv_origin_structure = ls_column-origin_structure.
       lv_position_i = ls_column-column_position.
       lv_length_i   = ls_column-length.
       lv_decimals_i = ls_column-decimals.
+      lv_include_depth_i = ls_column-include_depth.
       lv_position   = lv_position_i.
       lv_length     = lv_length_i.
       lv_decimals   = lv_decimals_i.
+      lv_include_depth = lv_include_depth_i.
 
       lv_fieldname = escape_json_string( lv_fieldname ).
       lv_json_key  = escape_json_string( lv_json_key ).
       lv_element   = escape_json_string( lv_element ).
       lv_abap_type = escape_json_string( lv_abap_type ).
       lv_label     = escape_json_string( lv_label ).
+      lv_origin_type = escape_json_string( lv_origin_type ).
+      lv_origin_structure = escape_json_string( lv_origin_structure ).
+
 
       lv_key = 'false'.
       IF ls_column-is_key = abap_true OR ls_column-is_key = 'X'.
@@ -179,7 +204,10 @@ CLASS ZCL_MILO_SERIALIZER IMPLEMENTATION.
         '","length":' && lv_length &&
         ',"decimals":' && lv_decimals &&
         ',"isKey":' && lv_key &&
-        ',"label":"' && lv_label && '"}'.
+                ',"label":"' && lv_label &&
+        '","originType":"' && lv_origin_type &&
+        '","originStructure":"' && lv_origin_structure &&
+        '","includeDepth":' && lv_include_depth && '}'.
 
       APPEND lv_row_json TO lt_json_rows.
 

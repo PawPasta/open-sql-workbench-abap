@@ -16,14 +16,17 @@ CLASS zcl_milo_ddic_browser DEFINITION
 
     TYPES:
       BEGIN OF ty_field_info,
-        position  TYPE dd03l-position,
-        keyflag   TYPE dd03l-keyflag,
-        fieldname TYPE dd03l-fieldname,
-        rollname  TYPE dd03l-rollname,
-        datatype  TYPE dd03l-datatype,
-        leng      TYPE dd03l-leng,
-        decimals  TYPE dd03l-decimals,
-        ddtext    TYPE dd03t-ddtext,
+        position         TYPE dd03l-position,
+        keyflag          TYPE dd03l-keyflag,
+        fieldname        TYPE dd03l-fieldname,
+        rollname         TYPE dd03l-rollname,
+        datatype         TYPE dd03l-datatype,
+        leng             TYPE dd03l-leng,
+        decimals         TYPE dd03l-decimals,
+        ddtext           TYPE dd03t-ddtext,
+        origin_type      TYPE c LENGTH 10,
+        origin_structure TYPE dd03l-precfield,
+        include_depth    TYPE dd03l-adminfield,
       END OF ty_field_info.
 
     TYPES tt_field_info TYPE STANDARD TABLE OF ty_field_info WITH EMPTY KEY.
@@ -84,6 +87,33 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
   METHOD get_fields.
 
     DATA lv_obj_name TYPE zmilo_obj_name.
+    DATA lv_depth TYPE i.
+    DATA lv_child_depth TYPE i.
+
+    TYPES:
+      BEGIN OF ty_ddic_entry,
+        position   TYPE dd03l-position,
+        keyflag    TYPE dd03l-keyflag,
+        fieldname  TYPE dd03l-fieldname,
+        rollname   TYPE dd03l-rollname,
+        datatype   TYPE dd03l-datatype,
+        leng       TYPE dd03l-leng,
+        decimals   TYPE dd03l-decimals,
+        precfield  TYPE dd03l-precfield,
+        adminfield TYPE dd03l-adminfield,
+      END OF ty_ddic_entry.
+
+    TYPES:
+      BEGIN OF ty_include_context,
+        depth            TYPE i,
+        origin_type      TYPE c LENGTH 10,
+        origin_structure TYPE dd03l-precfield,
+      END OF ty_include_context.
+
+    DATA lt_ddic_entry TYPE STANDARD TABLE OF ty_ddic_entry
+          WITH EMPTY KEY.
+    DATA lt_include_context TYPE STANDARD TABLE OF ty_include_context
+      WITH EMPTY KEY.
 
     lv_obj_name = to_upper( iv_obj_name ).
 
@@ -99,22 +129,77 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
            rollname,
            datatype,
            leng,
-           decimals
+                      decimals,
+           precfield,
+           adminfield
       FROM dd03l
       WHERE tabname  = @lv_obj_name
         AND as4local = 'A'
-        AND fieldname <> '.INCLUDE'
       ORDER BY position
-      INTO CORRESPONDING FIELDS OF TABLE @rt_field.
+      INTO CORRESPONDING FIELDS OF TABLE @lt_ddic_entry.
 
-    IF rt_field IS INITIAL.
+    IF lt_ddic_entry IS INITIAL.
       RAISE EXCEPTION TYPE zcx_milo_validation
         EXPORTING
           textid         = zcx_milo_validation=>object_not_allowed
           mv_object_name = lv_obj_name.
     ENDIF.
 
-    LOOP AT rt_field ASSIGNING FIELD-SYMBOL(<ls_field>).
+    LOOP AT lt_ddic_entry INTO DATA(ls_ddic_entry).
+      lv_depth = ls_ddic_entry-adminfield.
+
+      IF ls_ddic_entry-fieldname CP '.INCLU*'.
+        lv_child_depth = lv_depth + 1.
+
+        DELETE lt_include_context
+          WHERE depth >= lv_child_depth.
+
+        DATA(ls_include_context) = VALUE ty_include_context(
+          depth            = lv_child_depth
+          origin_structure = ls_ddic_entry-precfield
+          origin_type      = 'INCLUDE' ).
+
+        IF ls_ddic_entry-fieldname CP '.INCLU--AP*'.
+          ls_include_context-origin_type = 'APPEND'.
+        ELSEIF lv_depth > 0.
+          READ TABLE lt_include_context INTO DATA(ls_parent_context)
+            WITH KEY depth = lv_depth.
+          IF sy-subrc = 0 AND ls_parent_context-origin_type = 'APPEND'.
+            ls_include_context-origin_type = 'APPEND'.
+          ENDIF.
+        ENDIF.
+
+        APPEND ls_include_context TO lt_include_context.
+        CONTINUE.
+      ENDIF.
+
+      APPEND INITIAL LINE TO rt_field ASSIGNING FIELD-SYMBOL(<ls_field>).
+      <ls_field>-position      = ls_ddic_entry-position.
+      <ls_field>-keyflag       = ls_ddic_entry-keyflag.
+      <ls_field>-fieldname     = ls_ddic_entry-fieldname.
+      <ls_field>-rollname      = ls_ddic_entry-rollname.
+      <ls_field>-datatype      = ls_ddic_entry-datatype.
+      <ls_field>-leng          = ls_ddic_entry-leng.
+      <ls_field>-decimals      = ls_ddic_entry-decimals.
+      <ls_field>-include_depth = ls_ddic_entry-adminfield.
+
+
+      IF lv_depth = 0.
+        <ls_field>-origin_type = 'DIRECT'.
+
+      ELSE.
+        READ TABLE lt_include_context INTO ls_include_context
+          WITH KEY depth = lv_depth.
+
+        IF sy-subrc = 0.
+          <ls_field>-origin_type = ls_include_context-origin_type.
+          <ls_field>-origin_structure =
+            ls_include_context-origin_structure.
+        ELSE.
+          <ls_field>-origin_type = 'INCLUDE'.
+        ENDIF.
+      ENDIF.
+
       SELECT SINGLE ddtext
         FROM dd03t
         WHERE tabname    = @lv_obj_name
