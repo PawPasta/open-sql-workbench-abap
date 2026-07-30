@@ -62,6 +62,606 @@
      <MSGNR>008</MSGNR>
      <TEXT>ORDER BY clause is invalid or not supported</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>010</MSGNR>
+     <TEXT>Required parameter &amp;1 is missing</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>011</MSGNR>
+     <TEXT>Value &amp;2 is not valid for parameter &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>012</MSGNR>
+     <TEXT>ProfileId is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>013</MSGNR>
+     <TEXT>Profile &amp;1 does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>014</MSGNR>
+     <TEXT>Profile &amp;1 is inactive</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>015</MSGNR>
+     <TEXT>No PFCG role is configured for profile &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>016</MSGNR>
+     <TEXT>Current user is not assigned to the role required by profile &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>017</MSGNR>
+     <TEXT>Role assignment for profile &amp;1 is not currently valid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>018</MSGNR>
+     <TEXT>Page number &amp;1 is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>019</MSGNR>
+     <TEXT>Row limit &amp;1 is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>020</MSGNR>
+     <TEXT>Multiple SQL statements are not allowed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>021</MSGNR>
+     <TEXT>SQL comments are not allowed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>022</MSGNR>
+     <TEXT>SELECT field list is missing</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>023</MSGNR>
+     <TEXT>FROM clause is missing</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>024</MSGNR>
+     <TEXT>Source object is missing after FROM or JOIN</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>025</MSGNR>
+     <TEXT>SQL statement contains unbalanced parentheses</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>026</MSGNR>
+     <TEXT>SQL statement contains an unterminated string literal</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>027</MSGNR>
+     <TEXT>SQL clause &amp;1 is not supported</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>028</MSGNR>
+     <TEXT>SQL clause &amp;1 is specified more than once</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>029</MSGNR>
+     <TEXT>Alias &amp;1 is invalid or duplicated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>030</MSGNR>
+     <TEXT>DDIC object &amp;1 was not found or is inactive</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>031</MSGNR>
+     <TEXT>Object &amp;1 is not allowed by whitelist &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>032</MSGNR>
+     <TEXT>Field &amp;1 was not found in object &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>033</MSGNR>
+     <TEXT>Field &amp;1 is not allowed in clause &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>034</MSGNR>
+     <TEXT>Field &amp;1 is ambiguous; specify a source alias</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>035</MSGNR>
+     <TEXT>Source alias &amp;1 was not found for field &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>036</MSGNR>
+     <TEXT>Output field or alias &amp;1 is duplicated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>037</MSGNR>
+     <TEXT>Query selects &amp;1 fields; maximum allowed is &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>038</MSGNR>
+     <TEXT>SELECT * was limited to the first &amp;1 fields</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>039</MSGNR>
+     <TEXT>Data type &amp;2 of field &amp;1 is not supported</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>040</MSGNR>
+     <TEXT>JOIN type &amp;1 is not supported</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>041</MSGNR>
+     <TEXT>Query uses &amp;1 sources; maximum allowed is &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>042</MSGNR>
+     <TEXT>Source &amp;1 requires an alias in this JOIN</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>043</MSGNR>
+     <TEXT>Source alias &amp;1 is used more than once</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>044</MSGNR>
+     <TEXT>ON condition is missing for source &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>045</MSGNR>
+     <TEXT>ON condition is missing for source &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>046</MSGNR>
+     <TEXT>Field &amp;1 does not belong to source alias &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>047</MSGNR>
+     <TEXT>JOIN fields &amp;1 and &amp;2 have incompatible data types</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>048</MSGNR>
+     <TEXT>JOIN source &amp;1 is not allowed for profile &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>049</MSGNR>
+     <TEXT>JOIN expression could not be parsed near &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>050</MSGNR>
+     <TEXT>WHERE condition is empty</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>051</MSGNR>
+     <TEXT>WHERE operator &amp;1 is not supported</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>052</MSGNR>
+     <TEXT>Field &amp;1 is not valid in the WHERE clause</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>053</MSGNR>
+     <TEXT>Value &amp;2 is not valid for field &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>054</MSGNR>
+     <TEXT>BETWEEN expression for field &amp;1 is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>055</MSGNR>
+     <TEXT>IN value list for field &amp;1 is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>056</MSGNR>
+     <TEXT>LIKE pattern for field &amp;1 is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>057</MSGNR>
+     <TEXT>NULL comparison for field &amp;1 is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>058</MSGNR>
+     <TEXT>Logical operator placement near &amp;1 is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>059</MSGNR>
+     <TEXT>WHERE clause contains invalid parentheses</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>060</MSGNR>
+     <TEXT>Aggregate function &amp;1 is not supported</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>061</MSGNR>
+     <TEXT>Argument of aggregate function &amp;1 is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>062</MSGNR>
+     <TEXT>Aggregate expression &amp;1 requires an alias</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>063</MSGNR>
+     <TEXT>GROUP BY clause is invalid or not supported</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>064</MSGNR>
+     <TEXT>GROUP BY field &amp;1 is not present in the SELECT list</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>065</MSGNR>
+     <TEXT>Selected field &amp;1 must be grouped or aggregated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>066</MSGNR>
+     <TEXT>HAVING requires GROUP BY or an aggregate query</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>067</MSGNR>
+     <TEXT>HAVING clause is invalid or not supported</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>068</MSGNR>
+     <TEXT>Aggregate expression &amp;1 is not valid in HAVING</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>069</MSGNR>
+     <TEXT>DISTINCT aggregate expression &amp;1 is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>070</MSGNR>
+     <TEXT>Field or alias &amp;1 is not valid in ORDER BY</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>071</MSGNR>
+     <TEXT>Sort direction &amp;1 is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>072</MSGNR>
+     <TEXT>ORDER BY expression &amp;1 is not supported</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>073</MSGNR>
+     <TEXT>Output alias &amp;1 was not found for ORDER BY</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>074</MSGNR>
+     <TEXT>ORDER BY field &amp;1 is specified more than once</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>075</MSGNR>
+     <TEXT>Page &amp;1 requires a deterministic ORDER BY clause</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>076</MSGNR>
+     <TEXT>Page &amp;1 exceeds the available page count &amp;2</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>077</MSGNR>
+     <TEXT>Page size &amp;1 is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>078</MSGNR>
+     <TEXT>Paging offset exceeds the supported numeric range</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>079</MSGNR>
+     <TEXT>ORDER BY fields do not uniquely stabilize paging</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>080</MSGNR>
+     <TEXT>QueryId &amp;1 is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>081</MSGNR>
+     <TEXT>Saved query &amp;1 was not found</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>082</MSGNR>
+     <TEXT>Saved query &amp;1 is inactive</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>083</MSGNR>
+     <TEXT>Current user cannot access saved query &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>084</MSGNR>
+     <TEXT>Only the owner can modify saved query &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>085</MSGNR>
+     <TEXT>Query name is required</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>086</MSGNR>
+     <TEXT>Query visibility &amp;1 is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>087</MSGNR>
+     <TEXT>ResultId &amp;1 is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>088</MSGNR>
+     <TEXT>Result &amp;1 was not found or has expired</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>089</MSGNR>
+     <TEXT>Current user cannot access result &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>090</MSGNR>
+     <TEXT>Metadata for object &amp;1 was not found</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>091</MSGNR>
+     <TEXT>Metadata for field &amp;1 of object &amp;2 was not found</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>092</MSGNR>
+     <TEXT>Whitelist profile &amp;1 was not found</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>093</MSGNR>
+     <TEXT>Mask profile &amp;1 was not found</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>094</MSGNR>
+     <TEXT>Mask rule for field &amp;1 of object &amp;2 is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>095</MSGNR>
+     <TEXT>Maximum row configuration for object &amp;1 is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>096</MSGNR>
+     <TEXT>Profile &amp;1 has more than one active role configuration</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>097</MSGNR>
+     <TEXT>Result storage configuration is invalid</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>098</MSGNR>
+     <TEXT>DDIC object type &amp;2 of object &amp;1 is not supported</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>099</MSGNR>
+     <TEXT>SQL Workbench configuration is incomplete for &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>100</MSGNR>
+     <TEXT>Query execution failed; review the request log</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>101</MSGNR>
+     <TEXT>Generated Open SQL could not be executed</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>102</MSGNR>
+     <TEXT>Result type of field &amp;1 is incompatible with the expected type</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>103</MSGNR>
+     <TEXT>Numeric value overflow occurred while processing field &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>104</MSGNR>
+     <TEXT>Query result could not be serialized</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>105</MSGNR>
+     <TEXT>Query result could not be stored</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>106</MSGNR>
+     <TEXT>Saved query could not be stored or updated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>107</MSGNR>
+     <TEXT>Execution log could not be written</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>108</MSGNR>
+     <TEXT>A technical identifier could not be generated</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>109</MSGNR>
+     <TEXT>An unexpected internal error occurred; reference &amp;1</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>
