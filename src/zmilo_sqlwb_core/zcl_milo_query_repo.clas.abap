@@ -23,6 +23,13 @@ CLASS zcl_milo_query_repo DEFINITION
       RETURNING
         VALUE(rs_query) TYPE zmilo_query.
 
+    CLASS-METHODS get_query_access_state
+      IMPORTING
+        iv_query_id     TYPE sysuuid_x16
+        iv_profile_id   TYPE zmilo_profile_id
+      RETURNING
+        VALUE(rv_state) TYPE string.
+
     CLASS-METHODS update_query
       IMPORTING
         iv_query_id       TYPE sysuuid_x16
@@ -206,6 +213,28 @@ CLASS ZCL_MILO_QUERY_REPO IMPLEMENTATION.
     IF sy-subrc = 0.
       rv_updated = abap_true.
       COMMIT WORK AND WAIT.
+    ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD get_query_access_state.
+
+    SELECT SINGLE owner,
+                  profile_id,
+                  is_active
+      FROM zmilo_query
+      WHERE query_id = @iv_query_id
+      INTO @DATA(ls_query_access).
+
+    IF sy-subrc <> 0
+       OR ls_query_access-is_active <> abap_true
+       OR ls_query_access-profile_id <> iv_profile_id.
+      rv_state = 'NOT_FOUND'.
+    ELSEIF ls_query_access-owner <> sy-uname.
+      rv_state = 'NOT_OWNER'.
+    ELSE.
+      rv_state = 'OWNER'.
     ENDIF.
 
   ENDMETHOD.

@@ -1,22 +1,22 @@
-class ZCL_ZSU26_GW_MILO_DPC_EXT definition
-  public
-  inheriting from ZCL_ZSU26_GW_MILO_DPC
-  create public .
+CLASS zcl_zsu26_gw_milo_dpc_ext DEFINITION
+  PUBLIC
+  INHERITING FROM zcl_zsu26_gw_milo_dpc
+  CREATE PUBLIC .
 
-public section.
+  PUBLIC SECTION.
 
-  methods /IWBEP/IF_MGW_APPL_SRV_RUNTIME~EXECUTE_ACTION
-    redefinition .
-protected section.
+    METHODS /iwbep/if_mgw_appl_srv_runtime~execute_action
+        REDEFINITION .
+  PROTECTED SECTION.
 
-  methods SQLWBCOLUMNSET_GET_ENTITYSET
-    redefinition .
-  methods SQLWBPAGECHUNKSE_GET_ENTITYSET
-    redefinition .
-  methods SQLWBSAVEDQUERYS_GET_ENTITYSET
-    redefinition .
-  methods SQLWBUSERPROFILE_GET_ENTITYSET
-    redefinition .
+    METHODS sqlwbcolumnset_get_entityset
+        REDEFINITION .
+    METHODS sqlwbpagechunkse_get_entityset
+        REDEFINITION .
+    METHODS sqlwbsavedquerys_get_entityset
+        REDEFINITION .
+    METHODS sqlwbuserprofile_get_entityset
+        REDEFINITION .
   PRIVATE SECTION.
 ENDCLASS.
 
@@ -31,7 +31,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
       BEGIN OF ty_run_result,
         resultid     TYPE string,
         status       TYPE string,
-        objectname   TYPE zmilo_obj_name,
+        objectname   TYPE zsqlwb_obj_name,
         rowcount     TYPE i,
         returnedrows TYPE i,
         totalrows    TYPE i,
@@ -44,6 +44,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         errortext    TYPE string,
       END OF ty_run_result.
 
+    "Khai báo type phản hồi cho function import save query (sace thành công/không thành công)
     TYPES:
       BEGIN OF ty_save_query_result,
         queryid   TYPE string,
@@ -52,39 +53,49 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         errortext TYPE string,
       END OF ty_save_query_result.
 
+    "Chuẩn bị sẵn các biến dùng cho các type phản hồi.
     DATA lv_action_name TYPE string.
-    DATA lv_profile_id  TYPE zmilo_profile_id.
+    DATA lv_profile_id  TYPE zsqlwb_profile_id.
     DATA lv_sql_text    TYPE string.
     DATA lv_page        TYPE i.
+    DATA lv_page_supplied TYPE abap_bool.
     DATA lv_search_text TYPE string.
     DATA lv_max_rows    TYPE i.
-    DATA lv_object_name TYPE zmilo_obj_name.
+    DATA lv_object_name TYPE zsqlwb_obj_name.
     DATA lv_query_id_c32 TYPE string.
     DATA lv_query_id     TYPE sysuuid_x16.
-    DATA lv_query_name   TYPE zmilo_query_name.
-    DATA lv_visibility   TYPE zmilo_visibility.
-    DATA lv_tags         TYPE zmilo_tags.
-    DATA lv_description  TYPE zmilo_description.
+    DATA lv_query_name   TYPE zsqlwb_query_name.
+    DATA lv_visibility   TYPE zsqlwb_visibility.
+    DATA lv_tags         TYPE zsqlwb_tags.
+    DATA lv_description  TYPE zsqlwb_description.
     DATA lv_saved_sql_text TYPE string.
     DATA lv_result_id   TYPE sysuuid_x16.
     DATA lv_result_c32  TYPE string.
-    DATA ls_srv_result  TYPE zcl_milo_service=>ty_run_result.
-    DATA ls_head        TYPE zmilo_rhead.
-    DATA ls_saved_query TYPE zmilo_query.
-    DATA lt_result_field TYPE zcl_milo_service=>tt_ddic_field.
-    DATA lt_column      TYPE zcl_milo_result_repo=>tt_column.
-    DATA lt_page        TYPE zcl_milo_result_repo=>tt_page.
+    DATA ls_srv_result  TYPE zcl_sqlwb_service=>ty_run_result.
+    DATA ls_head        TYPE zsqlwb_rhead.
+    DATA ls_saved_query TYPE zsqlwb_query.
+    DATA lt_result_field TYPE zcl_sqlwb_service=>tt_ddic_field.
+    DATA lt_column      TYPE zcl_sqlwb_result_repo=>tt_column.
+    DATA lt_page        TYPE zcl_sqlwb_result_repo=>tt_page.
     DATA ls_response    TYPE ty_run_result.
     DATA ls_save_response TYPE ty_save_query_result.
 
+    "Khai báo FIELD-SYMBOLS để trỏ với vùng dữ liệu /iwbep/s_mgw_name_value_pair.
+    "Lưu ý /iwbep/s_mgw_name_value_pair là 1 structure type có sẵn trong sap gateway, có gồm 1 name và 1 value
+    "Ngoài ra còn có /iwbep/t_mgw_name_value_pair, tức là bảng chứa nhiều cặp /iwbep/s_mgw_name_value_pair
     FIELD-SYMBOLS <ls_parameter> TYPE /iwbep/s_mgw_name_value_pair.
 
+    "In hoa để có thể xác định đúng loại actiom cho dù người dùng có viết như thế nào, cũng có thể to_lower
+    "iv_action_name là signature của method /IWBEP/IF_MGW_APPL_SRV_RUNTIME~EXECUTE_ACTION
     lv_action_name = to_upper( iv_action_name ).
 
     CASE lv_action_name.
 
       WHEN 'RUNQUERY'.
 
+        "it_parameter biến có sẵn trong method này,nó là danh sách chứa các cập ls_parameter
+        "Có thể dùng kiểu khai báo ls_parameter thay vì khai báo <ls_parameter>, nhưng sẽ giảm tốc độ nếu số lượng cặp nhiều
+        "Vì ls_parameter mỗi lần lập sẽ copy dữ liệu còn <ls_parameter> thì không
         LOOP AT it_parameter ASSIGNING <ls_parameter>.
           CASE to_upper( <ls_parameter>-name ).
             WHEN 'PROFILEID'.
@@ -93,21 +104,27 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
               lv_sql_text = <ls_parameter>-value.
             WHEN 'PAGE'.
               lv_page = <ls_parameter>-value.
+              lv_page_supplied = abap_true.
           ENDCASE.
         ENDLOOP.
 
-        IF lv_page IS INITIAL.
+        IF lv_page_supplied <> abap_true.
           lv_page = 1.
         ENDIF.
 
-        lv_result_id = zcl_milo_result_repo=>create_result_id( ).
-        lv_result_c32 = zcl_milo_result_repo=>result_id_to_c32( lv_result_id ).
+        "Tạo result_id dạng x16 ngẫu nhiên để lưu vào bảng
+        lv_result_id = zcl_sqlwb_result_repo=>create_result_id( ).
+        "Chuyển id vừa tạo thành dạng C32 để trả về cho fe
+        lv_result_c32 = zcl_sqlwb_result_repo=>result_id_to_c32( lv_result_id ).
 
-        ls_srv_result = zcl_milo_service=>run_query_result(
+        "Gọi method run_query_result và truyền 3 tham số gửi từ fe vào.
+        "Phản hồi sẽ là type ty_run_result được khai báo trong zcl_sqlwb_service
+        ls_srv_result = zcl_sqlwb_service=>run_query_result(
           iv_profile_id = lv_profile_id
           iv_sql        = lv_sql_text
           iv_page       = lv_page ).
 
+        "Gán kết quả phản hồi vào ls_head (zsqlwb_rhead)
         ls_head-result_id     = lv_result_id.
         ls_head-user_name     = sy-uname.
         ls_head-profile_id    = lv_profile_id.
@@ -125,25 +142,42 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         ls_head-error_text    = ls_srv_result-error_text.
         GET TIME STAMP FIELD ls_head-created_at.
 
+        "Chạy nếu SQL thành công
         IF ls_srv_result-status = 'SUCCESS'.
 
           TRY.
-              lt_column = zcl_milo_service=>build_result_columns(
+
+              "Tạo cấu trúc cột của bảng đang truy vấn và lưu vào ZSQLWB_RCOL
+              "Mục đích để FE biết kết quả gồm những cột nào và kiểu dữ liệu từng cột
+              lt_column = zcl_sqlwb_service=>build_result_columns(
                 iv_profile_id = lv_profile_id
                 iv_sql        = lv_sql_text
                 iv_result_id  = lv_result_id ).
 
-              lt_page = zcl_milo_result_repo=>build_page_chunks(
+              "Chia dữ liệu tổng thành từng chunk và lưu vào ZSQLWB_RPAGE
+              "Mục đích để chia nhỏ request, tránh gửi quá nhiều dữ liệu 1 lần, hạn chế thất thoát dữ liệu
+              lt_page = zcl_sqlwb_result_repo=>build_page_chunks(
                 iv_result_id = lv_result_id
                 iv_page_no   = ls_srv_result-page
                 iv_rows_json = ls_srv_result-rows_json ).
 
-            CATCH zcx_milo_validation INTO DATA(lx_validation).
+              "Bắt lỗi validatiom trong quá trình chạy build_result_columns hoặc build_page_chunks phát sinh exception
+            CATCH zcx_sqlwb_validation INTO DATA(lx_validation).
               CLEAR lt_column.
               CLEAR lt_page.
               ls_srv_result-status = 'BLOCKED'.
-              ls_srv_result-error_code = 'VALIDATION_ERROR'.
+              ls_srv_result-error_code =
+                zcl_sqlwb_service=>get_validation_error_code( lx_validation ).
               ls_srv_result-error_text = lx_validation->get_text( ).
+              ls_head-status = ls_srv_result-status.
+              ls_head-error_code = ls_srv_result-error_code.
+              ls_head-error_text = ls_srv_result-error_text.
+            CATCH cx_root INTO DATA(lx_run_error).
+              CLEAR lt_column.
+              CLEAR lt_page.
+              ls_srv_result-status = 'ERROR'.
+              ls_srv_result-error_code = 'SYSTEM_ERROR'.
+              ls_srv_result-error_text = lx_run_error->get_text( ).
               ls_head-status = ls_srv_result-status.
               ls_head-error_code = ls_srv_result-error_code.
               ls_head-error_text = ls_srv_result-error_text.
@@ -151,11 +185,14 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
 
         ENDIF.
 
-        zcl_milo_result_repo=>save_result(
+        "Lưu kết quả vào bảng (3 bảng)
+        zcl_sqlwb_result_repo=>save_result(
           is_head   = ls_head
           it_column = lt_column
           it_page   = lt_page ).
 
+        "Sở dĩ sử dụng thêm ls_response mà không tái sử dụng ls_head vì bọn nó khác kiểu dữ liệu.
+        "ls_response là type phản hồi cho request, ls_head là type dùng để lưu vào bảng ZSQLWB_RHEAD
         ls_response-resultid     = lv_result_c32.
         ls_response-status       = ls_srv_result-status.
         ls_response-objectname   = ls_srv_result-object_name.
@@ -170,6 +207,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         ls_response-errorcode    = ls_srv_result-error_code.
         ls_response-errortext    = ls_srv_result-error_text.
 
+        "Đây là 1 method có sẵn của SAP Gateway, vì Gateway sẽ nhận dữ liệu trả về thông qua một biến TYPE REF TO DATA
         copy_data_to_ref(
           EXPORTING
             is_data = ls_response
@@ -206,7 +244,8 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         ENDLOOP.
 
         TRY.
-            lv_query_id = zcl_milo_service=>save_query(
+
+            lv_query_id = zcl_sqlwb_service=>save_query(
               iv_profile_id   = lv_profile_id
               iv_query_name   = lv_query_name
               iv_query_text   = lv_sql_text
@@ -214,7 +253,8 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
               iv_tags         = lv_tags
               iv_description  = lv_description ).
 
-            lv_query_id_c32 = zcl_milo_result_repo=>result_id_to_c32( lv_query_id ).
+            "Chuyển lv_query_id nhận được từ method save_query với kiểu x16 thành kiểu c32 để phản hồi cho FE
+            lv_query_id_c32 = zcl_sqlwb_result_repo=>result_id_to_c32( lv_query_id ).
 
             IF lv_query_id IS INITIAL.
               ls_save_response-status = 'ERROR'.
@@ -225,9 +265,10 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
               ls_save_response-status = 'SUCCESS'.
             ENDIF.
 
-          CATCH zcx_milo_validation INTO DATA(lx_save_validation).
+          CATCH zcx_sqlwb_validation INTO DATA(lx_save_validation).
             ls_save_response-status = 'BLOCKED'.
-            ls_save_response-errorcode = 'VALIDATION_ERROR'.
+            ls_save_response-errorcode =
+              zcl_sqlwb_service=>get_validation_error_code( lx_save_validation ).
             ls_save_response-errortext = lx_save_validation->get_text( ).
           CATCH cx_root INTO DATA(lx_save_error).
             ls_save_response-status = 'ERROR'.
@@ -241,12 +282,16 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           CHANGING
             cr_data = er_data ).
 
+        "RunQuery và RunSavedQuery đều là thực thi SQL
+        "nhưng đầu vào và nghiệp vụ khác nhau nên tách thành 2 Function Import
+        "Tách ra cũng giúp người dùng để phân biệt hành động của người dùng
       WHEN 'RUNSAVEDQUERY'.
 
         CLEAR: lv_profile_id,
                lv_query_id_c32,
                lv_query_id,
                lv_page,
+               lv_page_supplied,
                lv_result_id,
                lv_result_c32,
                lv_saved_sql_text,
@@ -257,6 +302,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
                lt_page,
                ls_response.
 
+        "RunSavedQuery gửi về QUERYID thay vì gửi về SQLTEXT
         LOOP AT it_parameter ASSIGNING <ls_parameter>.
           CASE to_upper( <ls_parameter>-name ).
             WHEN 'PROFILEID'.
@@ -265,19 +311,21 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
               lv_query_id_c32 = <ls_parameter>-value.
             WHEN 'PAGE'.
               lv_page = <ls_parameter>-value.
+              lv_page_supplied = abap_true.
           ENDCASE.
         ENDLOOP.
 
-        IF lv_page IS INITIAL.
+        IF lv_page_supplied <> abap_true.
           lv_page = 1.
         ENDIF.
 
-        lv_query_id = zcl_milo_result_repo=>result_id_from_c32( lv_query_id_c32 ).
+        "Chuyển lv_query_id từ dạng c32 ở FE gửi về thành dạng x16 để truy vấn trong bảng ZSQLWB_QUERY vì cột query_id có kiểu SYSUUID_X16
+        lv_query_id = zcl_sqlwb_result_repo=>result_id_from_c32( lv_query_id_c32 ).
 
-        lv_result_id = zcl_milo_result_repo=>create_result_id( ).
-        lv_result_c32 = zcl_milo_result_repo=>result_id_to_c32( lv_result_id ).
+        lv_result_id = zcl_sqlwb_result_repo=>create_result_id( ).
+        lv_result_c32 = zcl_sqlwb_result_repo=>result_id_to_c32( lv_result_id ).
 
-        ls_srv_result = zcl_milo_service=>run_saved_query_result(
+        ls_srv_result = zcl_sqlwb_service=>run_saved_query_result(
           iv_profile_id = lv_profile_id
           iv_query_id   = lv_query_id
           iv_page       = lv_page ).
@@ -302,26 +350,28 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         IF ls_srv_result-status = 'SUCCESS'.
 
           TRY.
-              ls_saved_query = zcl_milo_query_repo=>get_query(
+              "Lấy SQLTEXT từ ls_saved_query
+              ls_saved_query = zcl_sqlwb_query_repo=>get_query(
                 iv_query_id   = lv_query_id
                 iv_profile_id = lv_profile_id ).
               lv_saved_sql_text = ls_saved_query-query_text.
 
-              lt_column = zcl_milo_service=>build_result_columns(
+              lt_column = zcl_sqlwb_service=>build_result_columns(
                 iv_profile_id = lv_profile_id
                 iv_sql        = lv_saved_sql_text
                 iv_result_id  = lv_result_id ).
 
-              lt_page = zcl_milo_result_repo=>build_page_chunks(
+              lt_page = zcl_sqlwb_result_repo=>build_page_chunks(
                 iv_result_id = lv_result_id
                 iv_page_no   = ls_srv_result-page
                 iv_rows_json = ls_srv_result-rows_json ).
 
-            CATCH zcx_milo_validation INTO DATA(lx_saved_validation).
+            CATCH zcx_sqlwb_validation INTO DATA(lx_saved_validation).
               CLEAR lt_column.
               CLEAR lt_page.
               ls_srv_result-status = 'BLOCKED'.
-              ls_srv_result-error_code = 'VALIDATION_ERROR'.
+              ls_srv_result-error_code =
+                zcl_sqlwb_service=>get_validation_error_code( lx_saved_validation ).
               ls_srv_result-error_text = lx_saved_validation->get_text( ).
               ls_head-status = ls_srv_result-status.
               ls_head-error_code = ls_srv_result-error_code.
@@ -339,7 +389,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
 
         ENDIF.
 
-        zcl_milo_result_repo=>save_result(
+        zcl_sqlwb_result_repo=>save_result(
           is_head   = ls_head
           it_column = lt_column
           it_page   = lt_page ).
@@ -395,7 +445,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           ENDCASE.
         ENDLOOP.
 
-        lv_query_id = zcl_milo_result_repo=>result_id_from_c32( lv_query_id_c32 ).
+        lv_query_id = zcl_sqlwb_result_repo=>result_id_from_c32( lv_query_id_c32 ).
 
         IF lv_query_id IS INITIAL.
           ls_save_response-status = 'BLOCKED'.
@@ -403,7 +453,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           ls_save_response-errortext = 'QueryId is invalid'.
         ELSE.
           TRY.
-              zcl_milo_service=>update_query(
+              zcl_sqlwb_service=>update_query(
                 iv_profile_id  = lv_profile_id
                 iv_query_id    = lv_query_id
                 iv_query_name  = lv_query_name
@@ -415,9 +465,10 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
               ls_save_response-queryid = lv_query_id_c32.
               ls_save_response-status = 'SUCCESS'.
 
-            CATCH zcx_milo_validation INTO DATA(lx_update_validation).
+            CATCH zcx_sqlwb_validation INTO DATA(lx_update_validation).
               ls_save_response-status = 'BLOCKED'.
-              ls_save_response-errorcode = 'VALIDATION_ERROR'.
+              ls_save_response-errorcode =
+                zcl_sqlwb_service=>get_validation_error_code( lx_update_validation ).
               ls_save_response-errortext = lx_update_validation->get_text( ).
             CATCH cx_root INTO DATA(lx_update_error).
               ls_save_response-status = 'ERROR'.
@@ -448,7 +499,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           ENDCASE.
         ENDLOOP.
 
-        lv_query_id = zcl_milo_result_repo=>result_id_from_c32( lv_query_id_c32 ).
+        lv_query_id = zcl_sqlwb_result_repo=>result_id_from_c32( lv_query_id_c32 ).
 
         IF lv_query_id IS INITIAL.
           ls_save_response-status = 'BLOCKED'.
@@ -456,16 +507,17 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           ls_save_response-errortext = 'QueryId is invalid'.
         ELSE.
           TRY.
-              zcl_milo_service=>delete_query(
+              zcl_sqlwb_service=>delete_query(
                 iv_profile_id = lv_profile_id
                 iv_query_id   = lv_query_id ).
 
               ls_save_response-queryid = lv_query_id_c32.
               ls_save_response-status = 'SUCCESS'.
 
-            CATCH zcx_milo_validation INTO DATA(lx_delete_validation).
+            CATCH zcx_sqlwb_validation INTO DATA(lx_delete_validation).
               ls_save_response-status = 'BLOCKED'.
-              ls_save_response-errorcode = 'VALIDATION_ERROR'.
+              ls_save_response-errorcode =
+                zcl_sqlwb_service=>get_validation_error_code( lx_delete_validation ).
               ls_save_response-errortext = lx_delete_validation->get_text( ).
             CATCH cx_root INTO DATA(lx_delete_error).
               ls_save_response-status = 'ERROR'.
@@ -497,20 +549,27 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           ENDCASE.
         ENDLOOP.
 
+        "Mặc định lấy 50 dòng nếu không truyền max rows
         IF lv_max_rows IS INITIAL.
           lv_max_rows = 50.
         ENDIF.
 
-        DATA lt_table_response TYPE zcl_zsu26_gw_milo_mpc=>tt_sqlwbtable.
+        "Khởi tạo 1 biến lt_table_response có kiểu là danh sách các entity SqlwbTable do SEGW generate trong lớp Model Provider Class
+        DATA lt_table_response TYPE zcl_zsqlwb_odata_mpc=>tt_sqlwbtable.
 
         TRY.
-            DATA(lt_table) = zcl_milo_service=>search_ddic_tables(
+            "Dấu () ở đây là kiểu khai báo biến inline, tức là biến lt_table sẽ được khai báo ở dòng này với kiểu dữ liệu là kiểu search_ddic_tables trả về
+            "Chỉ những trường hợp compiler có thể xác định kiểu dữ liệu từ vế phải hoặc ngữ cảnh thì mới dùng DATA()
+            DATA(lt_table) = zcl_sqlwb_service=>search_ddic_tables(
               iv_profile_id = lv_profile_id
               iv_search     = lv_search_text
               iv_max_rows   = lv_max_rows ).
 
             LOOP AT lt_table INTO DATA(ls_table).
+              "Đoạn này có nghĩa là thêm 1 dòng mới vào lt_table_response và cho ls_table_response trỏ với dòng vừa thêm
+              "Dùng để gắn từng giá trị của lt_table cho lt_table_response mà nó cần
               APPEND INITIAL LINE TO lt_table_response ASSIGNING FIELD-SYMBOL(<ls_table_response>).
+              "Gán từng giá trị vào
               <ls_table_response>-profileid = lv_profile_id.
               <ls_table_response>-objectname = ls_table-tabname.
 
@@ -526,7 +585,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
               <ls_table_response>-description = ls_table-ddtext.
             ENDLOOP.
 
-          CATCH zcx_milo_validation.
+          CATCH zcx_sqlwb_validation.
             CLEAR lt_table_response.
           CATCH cx_root.
             CLEAR lt_table_response.
@@ -544,6 +603,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
                lv_object_name,
                lv_max_rows,
                lv_page,
+               lv_page_supplied,
                lv_result_id,
                lv_result_c32,
                ls_srv_result,
@@ -563,23 +623,25 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
               lv_max_rows = <ls_parameter>-value.
             WHEN 'PAGE'.
               lv_page = <ls_parameter>-value.
+              lv_page_supplied = abap_true.
           ENDCASE.
         ENDLOOP.
 
+        "condense có tác dụng xóa khoảng trắng ở đầu và duôi và rút gọn nhiều khoảng trắng thành 1
         lv_object_name = to_upper( condense( lv_object_name ) ).
 
         IF lv_max_rows IS INITIAL.
           lv_max_rows = 100.
         ENDIF.
 
-        IF lv_page IS INITIAL.
+        IF lv_page_supplied <> abap_true.
           lv_page = 1.
         ENDIF.
 
-        lv_result_id = zcl_milo_result_repo=>create_result_id( ).
-        lv_result_c32 = zcl_milo_result_repo=>result_id_to_c32( lv_result_id ).
+        lv_result_id = zcl_sqlwb_result_repo=>create_result_id( ).
+        lv_result_c32 = zcl_sqlwb_result_repo=>result_id_to_c32( lv_result_id ).
 
-        ls_srv_result = zcl_milo_service=>preview_table_result(
+        ls_srv_result = zcl_sqlwb_service=>preview_table_result(
           iv_profile_id = lv_profile_id
           iv_obj_name   = lv_object_name
           iv_row_limit  = lv_max_rows
@@ -605,15 +667,16 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         IF ls_srv_result-status = 'SUCCESS'.
 
           TRY.
-              DATA(lt_preview_field) = zcl_milo_service=>get_ddic_fields(
+              DATA(lt_preview_field) = zcl_sqlwb_service=>get_ddic_fields(
                 iv_profile_id = lv_profile_id
                 iv_obj_name   = ls_srv_result-object_name ).
 
               DATA(lv_preview_field_count) = 0.
 
+              "Đã set giới hạn preview là lấy 20 field đầu.
               LOOP AT lt_preview_field INTO DATA(ls_preview_field).
                 lv_preview_field_count = lv_preview_field_count + 1.
-                IF lv_preview_field_count > zcl_milo_config=>c_max_select_fields.
+                IF lv_preview_field_count > zcl_sqlwb_config=>c_max_select_fields.
                   EXIT.
                 ENDIF.
                 APPEND ls_preview_field TO lt_result_field.
@@ -636,16 +699,17 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
                 <ls_preview_column>-include_depth    = ls_preview_result_field-include_depth.
               ENDLOOP.
 
-              lt_page = zcl_milo_result_repo=>build_page_chunks(
+              lt_page = zcl_sqlwb_result_repo=>build_page_chunks(
                 iv_result_id = lv_result_id
                 iv_page_no   = ls_srv_result-page
                 iv_rows_json = ls_srv_result-rows_json ).
 
-            CATCH zcx_milo_validation INTO DATA(lx_preview_validation).
+            CATCH zcx_sqlwb_validation INTO DATA(lx_preview_validation).
               CLEAR lt_column.
               CLEAR lt_page.
               ls_srv_result-status = 'BLOCKED'.
-              ls_srv_result-error_code = 'VALIDATION_ERROR'.
+              ls_srv_result-error_code =
+                zcl_sqlwb_service=>get_validation_error_code( lx_preview_validation ).
               ls_srv_result-error_text = lx_preview_validation->get_text( ).
               ls_head-status = ls_srv_result-status.
               ls_head-error_code = ls_srv_result-error_code.
@@ -654,7 +718,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
 
         ENDIF.
 
-        zcl_milo_result_repo=>save_result(
+        zcl_sqlwb_result_repo=>save_result(
           is_head   = ls_head
           it_column = lt_column
           it_page   = lt_page ).
@@ -695,10 +759,10 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
 
         lv_object_name = to_upper( condense( lv_object_name ) ).
 
-        DATA lt_field_response TYPE zcl_zsu26_gw_milo_mpc=>tt_sqlwbfield.
+        DATA lt_field_response TYPE zcl_zsqlwb_odata_mpc=>tt_sqlwbfield.
 
         TRY.
-            DATA(lt_get_field) = zcl_milo_service=>get_ddic_fields(
+            DATA(lt_get_field) = zcl_sqlwb_service=>get_ddic_fields(
               iv_profile_id = lv_profile_id
               iv_obj_name   = lv_object_name ).
 
@@ -720,7 +784,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
               <ls_field_response>-includedepth = ls_ddic_field-include_depth.
             ENDLOOP.
 
-          CATCH zcx_milo_validation.
+          CATCH zcx_sqlwb_validation.
             CLEAR lt_field_response.
           CATCH cx_root.
             CLEAR lt_field_response.
@@ -732,6 +796,10 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           CHANGING
             cr_data = er_data ).
 
+        "Trường hợp không có iv_action_name nào thuộc các case trên sẽ gọi ở đây
+        "Gọi về class cha, tức là class cha mà /iwbep/if_mgw_appl_srv_runtime~execute_action kế thừa để xử lý
+        "Gửi các thông tin như iv_action_name, it_parameter, io_tech_request_context, class cha sẽ xử lý và trả về er_data cho class con
+        "Sở dĩ phải thêm gọi cho class cha vì nếu không có thì mỗi action không thuộc các cass trên sẽ không được xử lý dẫn tới mất tích
       WHEN OTHERS.
         CALL METHOD super->/iwbep/if_mgw_appl_srv_runtime~execute_action
           EXPORTING
