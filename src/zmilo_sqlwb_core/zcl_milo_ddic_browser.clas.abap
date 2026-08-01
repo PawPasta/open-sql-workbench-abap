@@ -111,7 +111,7 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
       END OF ty_include_context.
 
     DATA lt_ddic_entry TYPE STANDARD TABLE OF ty_ddic_entry
-          WITH EMPTY KEY.
+      WITH EMPTY KEY.
     DATA lt_include_context TYPE STANDARD TABLE OF ty_include_context
       WITH EMPTY KEY.
 
@@ -129,7 +129,7 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
            rollname,
            datatype,
            leng,
-                      decimals,
+           decimals,
            precfield,
            adminfield
       FROM dd03l
@@ -141,7 +141,7 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
     IF lt_ddic_entry IS INITIAL.
       RAISE EXCEPTION TYPE zcx_milo_validation
         EXPORTING
-          textid         = zcx_milo_validation=>object_not_allowed
+          textid         = zcx_milo_validation=>object_not_found
           mv_object_name = lv_obj_name.
     ENDIF.
 
@@ -183,10 +183,8 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
       <ls_field>-decimals      = ls_ddic_entry-decimals.
       <ls_field>-include_depth = ls_ddic_entry-adminfield.
 
-
       IF lv_depth = 0.
         <ls_field>-origin_type = 'DIRECT'.
-
       ELSE.
         READ TABLE lt_include_context INTO ls_include_context
           WITH KEY depth = lv_depth.
@@ -242,10 +240,18 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
     IF zcl_milo_config=>is_object_allowed(
          iv_wlist_profile_id = iv_wlist_profile_id
          iv_obj_name         = lv_obj_name ) <> abap_true.
+      IF zcl_milo_config=>is_object_exists( lv_obj_name ) <> abap_true.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid         = zcx_milo_validation=>object_not_found
+            mv_object_name = lv_obj_name.
+      ENDIF.
+
       RAISE EXCEPTION TYPE zcx_milo_validation
         EXPORTING
-          textid         = zcx_milo_validation=>object_not_allowed
-          mv_object_name = lv_obj_name.
+          textid         = zcx_milo_validation=>object_not_whitelisted
+          mv_object_name = lv_obj_name
+          mv_value_1     = CONV string( iv_wlist_profile_id ).
     ENDIF.
 
     lv_row_limit = iv_row_limit.
@@ -339,10 +345,18 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
     IF zcl_milo_config=>is_object_allowed(
          iv_wlist_profile_id = iv_wlist_profile_id
          iv_obj_name         = lv_obj_name ) <> abap_true.
+      IF zcl_milo_config=>is_object_exists( lv_obj_name ) <> abap_true.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid         = zcx_milo_validation=>object_not_found
+            mv_object_name = lv_obj_name.
+      ENDIF.
+
       RAISE EXCEPTION TYPE zcx_milo_validation
         EXPORTING
-          textid         = zcx_milo_validation=>object_not_allowed
-          mv_object_name = lv_obj_name.
+          textid         = zcx_milo_validation=>object_not_whitelisted
+          mv_object_name = lv_obj_name
+          mv_value_1     = CONV string( iv_wlist_profile_id ).
     ENDIF.
 
     lv_row_limit = iv_row_limit.

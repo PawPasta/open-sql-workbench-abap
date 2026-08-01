@@ -12,6 +12,7 @@ CLASS zcl_milo_logger DEFINITION
         iv_exec_mode     TYPE zmilo_exec_mode
         iv_source_obj    TYPE zmilo_obj_name OPTIONAL
         iv_row_count     TYPE i OPTIONAL
+        iv_error_code    TYPE zmilo_error_code OPTIONAL
         iv_error_text    TYPE string OPTIONAL
         iv_row_limit_req TYPE i OPTIONAL
         iv_row_limit_eff TYPE i OPTIONAL
@@ -31,6 +32,7 @@ CLASS ZCL_MILO_LOGGER IMPLEMENTATION.
 
 
   METHOD log_execution.
+
     DATA ls_log TYPE zmilo_log.
 
     CLEAR rv_log_id.
@@ -53,6 +55,7 @@ CLASS ZCL_MILO_LOGGER IMPLEMENTATION.
     ls_log-sql_text    = iv_sql_text.
     ls_log-obj_name    = iv_source_obj.
     ls_log-row_count   = iv_row_count.
+    ls_log-error_code  = iv_error_code.
     ls_log-error_text  = iv_error_text.
 
     ls_log-row_limit_req = iv_row_limit_req.
@@ -61,14 +64,14 @@ CLASS ZCL_MILO_LOGGER IMPLEMENTATION.
     ls_log-duration_ms  = iv_duration_ms.
     ls_log-result_bytes = iv_result_bytes.
 
-    CASE iv_status.
-      WHEN 'BLOCKED'.
-        ls_log-error_code = 'VALIDATION'.
-      WHEN 'ERROR'.
-        ls_log-error_code = 'ERROR'.
-      WHEN OTHERS.
-        CLEAR ls_log-error_code.
-    ENDCASE.
+    IF ls_log-error_code IS INITIAL.
+      CASE iv_status.
+        WHEN 'BLOCKED'.
+          ls_log-error_code = 'VALIDATION'.
+        WHEN 'ERROR'.
+          ls_log-error_code = 'ERROR'.
+      ENDCASE.
+    ENDIF.
 
     CLEAR rv_log_id.
 
@@ -80,5 +83,6 @@ CLASS ZCL_MILO_LOGGER IMPLEMENTATION.
       rv_log_id = ls_log-log_id.
       COMMIT WORK AND WAIT.
     ENDIF.
+
   ENDMETHOD.
 ENDCLASS.

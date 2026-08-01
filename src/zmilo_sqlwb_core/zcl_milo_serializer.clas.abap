@@ -104,7 +104,6 @@ CLASS ZCL_MILO_SERIALIZER IMPLEMENTATION.
       lv_origin_type = escape_json_string( lv_origin_type ).
       lv_origin_structure = escape_json_string( lv_origin_structure ).
 
-
       lv_key = 'false'.
       IF ls_field-keyflag = abap_true OR ls_field-keyflag = 'X'.
         lv_key = 'true'.
@@ -119,7 +118,7 @@ CLASS ZCL_MILO_SERIALIZER IMPLEMENTATION.
         '","length":' && lv_leng &&
         ',"decimals":' && lv_decimals &&
         ',"isKey":' && lv_key &&
-                ',"label":"' && lv_ddtext &&
+        ',"label":"' && lv_ddtext &&
         '","originType":"' && lv_origin_type &&
         '","originStructure":"' && lv_origin_structure &&
         '","includeDepth":' && lv_include_depth && '}'.
@@ -189,7 +188,6 @@ CLASS ZCL_MILO_SERIALIZER IMPLEMENTATION.
       lv_origin_type = escape_json_string( lv_origin_type ).
       lv_origin_structure = escape_json_string( lv_origin_structure ).
 
-
       lv_key = 'false'.
       IF ls_column-is_key = abap_true OR ls_column-is_key = 'X'.
         lv_key = 'true'.
@@ -204,7 +202,7 @@ CLASS ZCL_MILO_SERIALIZER IMPLEMENTATION.
         '","length":' && lv_length &&
         ',"decimals":' && lv_decimals &&
         ',"isKey":' && lv_key &&
-                ',"label":"' && lv_label &&
+        ',"label":"' && lv_label &&
         '","originType":"' && lv_origin_type &&
         '","originStructure":"' && lv_origin_structure &&
         '","includeDepth":' && lv_include_depth && '}'.
