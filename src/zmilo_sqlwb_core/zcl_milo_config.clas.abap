@@ -1,47 +1,65 @@
-class ZCL_MILO_CONFIG definition
-  public
-  final
-  create public .
+CLASS zcl_milo_config DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC .
 
-public section.
+  PUBLIC SECTION.
 
-  types:
-    tt_mask TYPE STANDARD TABLE OF zmilo_mask WITH EMPTY KEY .
+    CONSTANTS c_max_select_fields TYPE i VALUE 50.
+    CONSTANTS c_max_join_sources TYPE i VALUE 5.
 
-  constants C_MAX_SELECT_FIELDS type I value 50 ##NO_TEXT.
-  constants C_MAX_JOIN_SOURCES type I value 5 ##NO_TEXT.
+    TYPES tt_mask TYPE STANDARD TABLE OF zmilo_mask WITH EMPTY KEY.
 
-  class-methods GET_ROLE_CONFIG
-    importing
-      !IV_PROFILE_ID type ZMILO_PROFILE_ID
-    returning
-      value(RS_ROLE) type ZMILO_ROLE .
-  class-methods IS_OBJECT_ALLOWED
-    importing
-      !IV_WLIST_PROFILE_ID type ZMILO_WLIST_PROFILE_ID
-      !IV_OBJ_NAME type ZMILO_OBJ_NAME
-    returning
-      value(RV_ALLOWED) type ABAP_BOOL .
-  class-methods GET_MASK_RULES
-    importing
-      !IV_MASK_PROFILE_ID type ZMILO_MASK_PROFILE_ID
-      !IV_OBJ_NAME type ZMILO_OBJ_NAME
-    returning
-      value(RT_MASK) type TT_MASK .
-  class-methods GET_OBJECT_MAX_ROWS
-    importing
-      !IV_WLIST_PROFILE_ID type ZMILO_WLIST_PROFILE_ID
-      !IV_OBJ_NAME type ZMILO_OBJ_NAME
-    returning
-      value(RV_MAX_ROWS) type I .
-  class-methods IS_FIELD_EXISTS
-    importing
-      !IV_OBJ_NAME type ZMILO_OBJ_NAME
-      !IV_FIELD_NAME type ZMILO_FIELD_NAME
-    returning
-      value(RV_EXISTS) type ABAP_BOOL .
-protected section.
-private section.
+    CLASS-METHODS get_role_config
+
+      IMPORTING
+        iv_profile_id  TYPE zmilo_profile_id
+      RETURNING
+        VALUE(rs_role) TYPE zmilo_role.
+
+    CLASS-METHODS get_role_config_any
+      IMPORTING
+        iv_profile_id  TYPE zmilo_profile_id
+      RETURNING
+        VALUE(rs_role) TYPE zmilo_role.
+
+    CLASS-METHODS is_object_exists
+      IMPORTING
+        iv_obj_name      TYPE zmilo_obj_name
+      RETURNING
+        VALUE(rv_exists) TYPE abap_bool.
+
+    CLASS-METHODS is_object_allowed
+      IMPORTING
+        iv_wlist_profile_id TYPE zmilo_wlist_profile_id
+        iv_obj_name         TYPE zmilo_obj_name
+      RETURNING
+        VALUE(rv_allowed)   TYPE abap_bool.
+
+    CLASS-METHODS get_mask_rules
+      IMPORTING
+        iv_mask_profile_id TYPE zmilo_mask_profile_id
+        iv_obj_name        TYPE zmilo_obj_name
+      RETURNING
+        VALUE(rt_mask)     TYPE tt_mask.
+
+    CLASS-METHODS get_object_max_rows
+      IMPORTING
+        iv_wlist_profile_id TYPE zmilo_wlist_profile_id
+        iv_obj_name         TYPE zmilo_obj_name
+      RETURNING
+        VALUE(rv_max_rows)  TYPE i.
+
+    CLASS-METHODS is_field_exists
+      IMPORTING
+        iv_obj_name      TYPE zmilo_obj_name
+        iv_field_name    TYPE zmilo_field_name
+      RETURNING
+        VALUE(rv_exists) TYPE abap_bool.
+
+  PROTECTED SECTION.
+  PRIVATE SECTION.
+
 ENDCLASS.
 
 
@@ -92,6 +110,7 @@ CLASS ZCL_MILO_CONFIG IMPLEMENTATION.
       WHERE profile_id = @iv_profile_id
         AND is_active  = 'X'
       INTO @rs_role.
+
   ENDMETHOD.
 
 
@@ -129,6 +148,33 @@ CLASS ZCL_MILO_CONFIG IMPLEMENTATION.
       INTO @DATA(lv_found).
 
     rv_allowed = xsdbool( sy-subrc = 0 ).
+
+  ENDMETHOD.
+
+
+  METHOD get_role_config_any.
+
+    SELECT SINGLE *
+      FROM zmilo_role
+      WHERE profile_id = @iv_profile_id
+      INTO @rs_role.
+
+  ENDMETHOD.
+
+
+  METHOD is_object_exists.
+
+    DATA lv_obj_name TYPE dd02l-tabname.
+
+    lv_obj_name = to_upper( condense( iv_obj_name ) ).
+
+    SELECT SINGLE tabname
+      FROM dd02l
+      WHERE tabname  = @lv_obj_name
+        AND as4local = 'A'
+      INTO @DATA(lv_found).
+
+    rv_exists = xsdbool( sy-subrc = 0 ).
 
   ENDMETHOD.
 ENDCLASS.
