@@ -276,7 +276,7 @@
      <SPRSL>E</SPRSL>
      <ARBGB>ZMIILO_MSG</ARBGB>
      <MSGNR>045</MSGNR>
-     <TEXT>ON condition is missing for source &amp;1</TEXT>
+     <TEXT>JOIN ON condition is invalid or not supported</TEXT>
     </T100>
     <T100>
      <SPRSL>E</SPRSL>
