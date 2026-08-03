@@ -80,7 +80,6 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
     DATA lv_result_saved TYPE abap_bool.
     DATA lv_mapped_error_code TYPE zmilo_error_code.
 
-
     FIELD-SYMBOLS <ls_parameter> TYPE /iwbep/s_mgw_name_value_pair.
 
     lv_action_name = to_upper( iv_action_name ).
@@ -105,7 +104,6 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           lv_page = 1.
         ENDIF.
 
-
         lv_result_id = zcl_milo_result_repo=>create_result_id( ).
 
         IF lv_result_id IS INITIAL.
@@ -122,14 +120,12 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           RETURN.
         ENDIF.
 
-
         lv_result_c32 = zcl_milo_result_repo=>result_id_to_c32( lv_result_id ).
 
         ls_srv_result = zcl_milo_service=>run_query_result(
           iv_profile_id = lv_profile_id
           iv_sql        = lv_sql_text
           iv_page       = lv_page ).
-
 
         ls_head-result_id     = lv_result_id.
         ls_head-user_name     = sy-uname.
@@ -148,11 +144,9 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         ls_head-error_text    = ls_srv_result-error_text.
         GET TIME STAMP FIELD ls_head-created_at.
 
-
         IF ls_srv_result-status = 'SUCCESS'.
 
           TRY.
-
 
               lt_column = zcl_milo_service=>build_result_columns(
                 iv_profile_id = lv_profile_id
@@ -347,6 +341,19 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
 
         lv_query_id = zcl_milo_result_repo=>result_id_from_c32( lv_query_id_c32 ).
 
+        IF lv_query_id IS INITIAL.
+          ls_response-status = 'BLOCKED'.
+          ls_response-errorcode = 'QUERY_ID_INVALID'.
+          ls_response-errortext =
+            |QueryId { lv_query_id_c32 } is invalid|.
+          copy_data_to_ref(
+            EXPORTING
+              is_data = ls_response
+            CHANGING
+              cr_data = er_data ).
+          RETURN.
+        ENDIF.
+
         lv_result_id = zcl_milo_result_repo=>create_result_id( ).
 
         IF lv_result_id IS INITIAL.
@@ -390,6 +397,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         IF ls_srv_result-status = 'SUCCESS'.
 
           TRY.
+              "Lấy SQLTEXT từ ls_saved_query
               ls_saved_query = zcl_milo_query_repo=>get_query(
                 iv_query_id   = lv_query_id
                 iv_profile_id = lv_profile_id ).
@@ -509,8 +517,9 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
 
         IF lv_query_id IS INITIAL.
           ls_save_response-status = 'BLOCKED'.
-          ls_save_response-errorcode = 'INVALID_QUERY_ID'.
-          ls_save_response-errortext = 'QueryId is invalid'.
+          ls_save_response-errorcode = 'QUERY_ID_INVALID'.
+          ls_save_response-errortext =
+            |QueryId { lv_query_id_c32 } is invalid|.
         ELSE.
           TRY.
               zcl_milo_service=>update_query(
@@ -575,8 +584,9 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
 
         IF lv_query_id IS INITIAL.
           ls_save_response-status = 'BLOCKED'.
-          ls_save_response-errorcode = 'INVALID_QUERY_ID'.
-          ls_save_response-errortext = 'QueryId is invalid'.
+          ls_save_response-errorcode = 'QUERY_ID_INVALID'.
+          ls_save_response-errortext =
+            |QueryId { lv_query_id_c32 } is invalid|.
         ELSE.
           TRY.
               zcl_milo_service=>delete_query(
@@ -633,7 +643,6 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           ENDCASE.
         ENDLOOP.
 
-
         IF lv_max_rows IS INITIAL.
           lv_max_rows = 50.
         ENDIF.
@@ -648,7 +657,6 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
 
             LOOP AT lt_table INTO DATA(ls_table).
               APPEND INITIAL LINE TO lt_table_response ASSIGNING FIELD-SYMBOL(<ls_table_response>).
-
               <ls_table_response>-profileid = lv_profile_id.
               <ls_table_response>-objectname = ls_table-tabname.
 
@@ -917,6 +925,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
             is_data = lt_field_response
           CHANGING
             cr_data = er_data ).
+
       WHEN OTHERS.
         CALL METHOD super->/iwbep/if_mgw_appl_srv_runtime~execute_action
           EXPORTING
@@ -927,16 +936,19 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
             er_data                 = er_data.
 
     ENDCASE.
+
   ENDMETHOD.
 
 
   METHOD sqlwbcolumnset_get_entityset.
 
     DATA lv_result_c32 TYPE string.
+    DATA lv_result_msgv TYPE symsgv.
     DATA lv_result_id  TYPE sysuuid_x16.
     DATA lv_row_no     TYPE i.
     DATA lv_skip       TYPE i.
     DATA lv_top        TYPE i.
+    DATA lv_access_state TYPE string.
     DATA lt_column     TYPE zcl_milo_result_repo=>tt_column.
 
     LOOP AT it_filter_select_options INTO DATA(ls_filter).
@@ -949,10 +961,42 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
     ENDLOOP.
 
     lv_result_id = zcl_milo_result_repo=>result_id_from_c32( lv_result_c32 ).
+    lv_result_msgv = lv_result_c32.
 
     IF lv_result_id IS INITIAL.
-      RETURN.
+      mo_context->get_message_container( )->add_message(
+        iv_msg_type   = 'E'
+        iv_msg_id     = 'Zmilo_MSG'
+        iv_msg_number = '087'
+        iv_msg_v1     = lv_result_msgv ).
+      RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+        EXPORTING
+          message_container = mo_context->get_message_container( ).
     ENDIF.
+
+    lv_access_state =
+      zcl_milo_result_repo=>get_result_access_state( lv_result_id ).
+
+    CASE lv_access_state.
+      WHEN 'NOT_FOUND' OR 'EXPIRED'.
+        mo_context->get_message_container( )->add_message(
+          iv_msg_type   = 'E'
+          iv_msg_id     = 'Zmilo_MSG'
+          iv_msg_number = '088'
+          iv_msg_v1     = lv_result_msgv ).
+        RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+          EXPORTING
+            message_container = mo_context->get_message_container( ).
+      WHEN 'ACCESS_DENIED'.
+        mo_context->get_message_container( )->add_message(
+          iv_msg_type   = 'E'
+          iv_msg_id     = 'Zmilo_MSG'
+          iv_msg_number = '089'
+          iv_msg_v1     = lv_result_msgv ).
+        RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+          EXPORTING
+            message_container = mo_context->get_message_container( ).
+    ENDCASE.
 
     lt_column = zcl_milo_result_repo=>list_columns( lv_result_id ).
 
@@ -985,18 +1029,19 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
       <ls_entity>-originstructure = ls_column-origin_structure.
       <ls_entity>-includedepth = ls_column-include_depth.
     ENDLOOP.
-
   ENDMETHOD.
 
 
   METHOD sqlwbpagechunkse_get_entityset.
 
     DATA lv_result_c32 TYPE string.
+    DATA lv_result_msgv TYPE symsgv.
     DATA lv_result_id  TYPE sysuuid_x16.
     DATA lv_page_no    TYPE i.
     DATA lv_row_no     TYPE i.
     DATA lv_skip       TYPE i.
     DATA lv_top        TYPE i.
+    DATA lv_access_state TYPE string.
     DATA lt_page       TYPE zcl_milo_result_repo=>tt_page.
 
     LOOP AT it_filter_select_options INTO DATA(ls_filter).
@@ -1019,10 +1064,42 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
     ENDIF.
 
     lv_result_id = zcl_milo_result_repo=>result_id_from_c32( lv_result_c32 ).
+    lv_result_msgv = lv_result_c32.
 
     IF lv_result_id IS INITIAL.
-      RETURN.
+      mo_context->get_message_container( )->add_message(
+        iv_msg_type   = 'E'
+        iv_msg_id     = 'Zmilo_MSG'
+        iv_msg_number = '087'
+        iv_msg_v1     = lv_result_msgv ).
+      RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+        EXPORTING
+          message_container = mo_context->get_message_container( ).
     ENDIF.
+
+    lv_access_state =
+      zcl_milo_result_repo=>get_result_access_state( lv_result_id ).
+
+    CASE lv_access_state.
+      WHEN 'NOT_FOUND' OR 'EXPIRED'.
+        mo_context->get_message_container( )->add_message(
+          iv_msg_type   = 'E'
+          iv_msg_id     = 'Zmilo_MSG'
+          iv_msg_number = '088'
+          iv_msg_v1     = lv_result_msgv ).
+        RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+          EXPORTING
+            message_container = mo_context->get_message_container( ).
+      WHEN 'ACCESS_DENIED'.
+        mo_context->get_message_container( )->add_message(
+          iv_msg_type   = 'E'
+          iv_msg_id     = 'Zmilo_MSG'
+          iv_msg_number = '089'
+          iv_msg_v1     = lv_result_msgv ).
+        RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+          EXPORTING
+            message_container = mo_context->get_message_container( ).
+    ENDCASE.
 
     lt_page = zcl_milo_result_repo=>list_page_chunks(
       iv_result_id = lv_result_id
