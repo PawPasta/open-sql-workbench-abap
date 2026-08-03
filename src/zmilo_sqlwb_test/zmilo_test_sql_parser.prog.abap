@@ -1,7 +1,5 @@
 *&---------------------------------------------------------------------*
-*& Report ZMILO_TEST_SQL_PARSER
-*&---------------------------------------------------------------------*
-*&
+*& Report Zmilo_TEST_SQL_PARSER
 *&---------------------------------------------------------------------*
 REPORT zmilo_test_sql_parser.
 
@@ -22,6 +20,9 @@ START-OF-SELECTION.
       WRITE: / 'GROUP SQL:', ls_parts-group_sql.
       WRITE: / 'HAVING SQL:', ls_parts-having_sql.
       WRITE: / 'ORDER SQL:', ls_parts-order_sql.
+      WRITE: / 'NORMALIZED HAVING:',
+        zcl_milo_sql_parser=>normalize_count_distinct_sql(
+          ls_parts-having_sql ).
 
       SKIP.
       WRITE: / 'SOURCES:'.
@@ -61,7 +62,8 @@ START-OF-SELECTION.
                    'FIELD:', ls_field-field_name,
                    'JSON KEY:', ls_field-output_key,
                    'AGG:', ls_field-is_aggregate,
-                   'FUNC:', ls_field-agg_func.
+                   'FUNC:', ls_field-agg_func,
+                   'DISTINCT:', ls_field-is_distinct.
         ENDLOOP.
       ENDIF.
 

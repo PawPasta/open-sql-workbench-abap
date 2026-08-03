@@ -1,9 +1,9 @@
 *&---------------------------------------------------------------------*
-*& Report ZMILO_TEST_RUN_QUERY
+*& Report Zmilo_TEST_RUN_QUERY
 *&---------------------------------------------------------------------*
 *&
 *&---------------------------------------------------------------------*
-REPORT zmilo_test_run_query.
+REPORT Zmilo_TEST_RUN_QUERY.
 
 PARAMETERS p_prof TYPE zmilo_profile_id DEFAULT 'DEV'.
 PARAMETERS p_qid  TYPE sysuuid_x16.
@@ -17,6 +17,8 @@ START-OF-SELECTION.
       DATA lv_count  TYPE i.
       DATA lv_status TYPE string.
       DATA lv_json   TYPE string.
+      DATA lv_error_code TYPE zmilo_error_code.
+      DATA lv_error_text TYPE string.
 
       ls_role = zcl_milo_config=>get_role_config( p_prof ).
 
@@ -28,17 +30,22 @@ START-OF-SELECTION.
       zcl_milo_executor=>execute_saved_query(
         EXPORTING
           iv_query_id         = p_qid
+          iv_profile_id       = p_prof
           iv_wlist_profile_id = ls_role-wlist_profile_id
           iv_mask_profile_id  = ls_role-mask_profile_id
         IMPORTING
           ev_object_name      = lv_obj
           ev_row_count        = lv_count
           ev_status           = lv_status
-          ev_rows_json        = lv_json ).
+          ev_rows_json        = lv_json
+          ev_error_code       = lv_error_code
+          ev_error_text       = lv_error_text ).
 
       WRITE: / 'STATUS:', lv_status.
       WRITE: / 'OBJECT:', lv_obj.
       WRITE: / 'ROWS:', lv_count.
+      WRITE: / 'ERROR CODE:', lv_error_code.
+      WRITE: / 'ERROR TEXT:', lv_error_text.
       WRITE: / 'JSON:'.
       WRITE: / lv_json.
 

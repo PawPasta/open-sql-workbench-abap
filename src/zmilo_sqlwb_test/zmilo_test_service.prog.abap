@@ -1,9 +1,10 @@
 *&---------------------------------------------------------------------*
-*& Report ZMILO_TEST_SERVICE
+*& Report Zmilo_TEST_SERVICE
 *&---------------------------------------------------------------------*
 *&
 *&---------------------------------------------------------------------*
 REPORT zmilo_test_service.
+
 PARAMETERS p_act  TYPE char8 DEFAULT 'RUN'.
 PARAMETERS p_prof TYPE zmilo_profile_id DEFAULT 'DEV'.
 PARAMETERS p_sql  TYPE string LOWER CASE.
@@ -41,6 +42,8 @@ START-OF-SELECTION.
           DATA lv_max_rows  TYPE i.
           DATA lv_truncated TYPE abap_bool.
           DATA lv_json      TYPE string.
+          DATA lv_error_code TYPE zmilo_error_code.
+          DATA lv_error_text TYPE string.
 
           zcl_milo_service=>run_query(
             EXPORTING
@@ -52,13 +55,17 @@ START-OF-SELECTION.
               ev_status      = lv_status
               ev_max_rows    = lv_max_rows
               ev_truncated   = lv_truncated
-              ev_rows_json   = lv_json ).
+              ev_rows_json   = lv_json
+              ev_error_code  = lv_error_code
+              ev_error_text  = lv_error_text ).
 
           WRITE: / 'STATUS:', lv_status.
           WRITE: / 'OBJECT:', lv_obj.
           WRITE: / 'ROWS:', lv_count.
           WRITE: / 'MAX ROWS:', lv_max_rows.
           WRITE: / 'TRUNCATED:', lv_truncated.
+          WRITE: / 'ERROR CODE:', lv_error_code.
+          WRITE: / 'ERROR TEXT:', lv_error_text.
           WRITE: / 'JSON:'.
           WRITE: / lv_json.
 
@@ -77,11 +84,32 @@ START-OF-SELECTION.
             WRITE: / 'SAVED QUERY ID:', lv_query_id.
           ENDIF.
 
+        WHEN 'UPDATE'.
+          zcl_milo_service=>update_query(
+            iv_profile_id  = p_prof
+            iv_query_id    = p_qid
+            iv_query_name  = p_name
+            iv_query_text  = p_sql
+            iv_visibility  = p_vis
+            iv_tags        = p_tags
+            iv_description = p_desc ).
+
+          WRITE: / 'UPDATED QUERY ID:', p_qid.
+
+        WHEN 'DELETE'.
+          zcl_milo_service=>delete_query(
+            iv_profile_id = p_prof
+            iv_query_id   = p_qid ).
+
+          WRITE: / 'DEACTIVATED QUERY ID:', p_qid.
+
         WHEN 'RUNSAVED'.
           DATA lv_saved_obj    TYPE zmilo_obj_name.
           DATA lv_saved_count  TYPE i.
           DATA lv_saved_status TYPE string.
           DATA lv_saved_json   TYPE string.
+          DATA lv_saved_error_code TYPE zmilo_error_code.
+          DATA lv_saved_error_text TYPE string.
 
           zcl_milo_service=>run_saved_query(
             EXPORTING
@@ -91,11 +119,15 @@ START-OF-SELECTION.
               ev_object_name = lv_saved_obj
               ev_row_count   = lv_saved_count
               ev_status      = lv_saved_status
-              ev_rows_json   = lv_saved_json ).
+              ev_rows_json   = lv_saved_json
+              ev_error_code  = lv_saved_error_code
+              ev_error_text  = lv_saved_error_text ).
 
           WRITE: / 'STATUS:', lv_saved_status.
           WRITE: / 'OBJECT:', lv_saved_obj.
           WRITE: / 'ROWS:', lv_saved_count.
+          WRITE: / 'ERROR CODE:', lv_saved_error_code.
+          WRITE: / 'ERROR TEXT:', lv_saved_error_text.
           WRITE: / 'JSON:'.
           WRITE: / lv_saved_json.
 
@@ -115,6 +147,7 @@ START-OF-SELECTION.
             WRITE: / 'OWNER:', ls_query-owner.
             WRITE: / 'NAME:', ls_query-query_name.
             WRITE: / 'VISIBILITY:', ls_query-visibility.
+            WRITE: / 'PROFILE:', ls_query-profile_id.
             WRITE: / 'SQL:', ls_query-query_text.
             WRITE: / 'CREATED DATE:', ls_query-created_date.
             WRITE: / 'CREATED TIME:', ls_query-created_time.
@@ -149,7 +182,7 @@ START-OF-SELECTION.
 
         WHEN OTHERS.
           WRITE: / 'UNKNOWN ACTION:', p_act.
-          WRITE: / 'VALID ACTIONS: ROLE, RUN, SAVE, RUNSAVED, LISTQ, LISTLOG'.
+          WRITE: / 'VALID ACTIONS: ROLE, RUN, SAVE, UPDATE, DELETE, RUNSAVED, LISTQ, LISTLOG'.
 
       ENDCASE.
 

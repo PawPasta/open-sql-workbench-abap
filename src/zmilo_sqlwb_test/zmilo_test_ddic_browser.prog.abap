@@ -59,6 +59,9 @@ START-OF-SELECTION.
             WRITE: / 'LENGTH:', ls_field-leng.
             WRITE: / 'DECIMALS:', ls_field-decimals.
             WRITE: / 'TEXT:', ls_field-ddtext.
+            WRITE: / 'ORIGIN TYPE:', ls_field-origin_type.
+            WRITE: / 'ORIGIN STRUCTURE:', ls_field-origin_structure.
+            WRITE: / 'INCLUDE DEPTH:', ls_field-include_depth.
           ENDLOOP.
 
         WHEN 'PREVIEW'.
