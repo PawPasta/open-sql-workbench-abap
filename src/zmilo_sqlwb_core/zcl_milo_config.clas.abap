@@ -1,4 +1,4 @@
-CLASS zcl_milo_config DEFINITION
+CLASS ZCL_milo_CONFIG DEFINITION
   PUBLIC
   FINAL
   CREATE PUBLIC .
@@ -41,14 +41,24 @@ CLASS zcl_milo_config DEFINITION
         iv_mask_profile_id TYPE zmilo_mask_profile_id
         iv_obj_name        TYPE zmilo_obj_name
       RETURNING
-        VALUE(rt_mask)     TYPE tt_mask.
+        VALUE(rt_mask)     TYPE tt_mask
+      RAISING
+        zcx_milo_validation.
 
     CLASS-METHODS get_object_max_rows
       IMPORTING
         iv_wlist_profile_id TYPE zmilo_wlist_profile_id
         iv_obj_name         TYPE zmilo_obj_name
       RETURNING
-        VALUE(rv_max_rows)  TYPE i.
+        VALUE(rv_max_rows)  TYPE i
+      RAISING
+        zcx_milo_validation.
+
+    CLASS-METHODS get_object_type
+      IMPORTING
+        iv_obj_name           TYPE zmilo_obj_name
+      RETURNING
+        VALUE(rv_object_type) TYPE dd02l-tabclass.
 
     CLASS-METHODS is_field_exists
       IMPORTING
@@ -80,6 +90,21 @@ CLASS ZCL_MILO_CONFIG IMPLEMENTATION.
         AND is_active       = 'X'
       INTO TABLE @rt_mask.
 
+    LOOP AT rt_mask INTO DATA(ls_mask).
+      IF ( ls_mask-mask_type <> 'FULL'
+           AND ls_mask-mask_type <> 'REPLACE'
+           AND ls_mask-mask_type <> 'PARTIAL' )
+         OR is_field_exists(
+              iv_obj_name   = lv_obj_name
+              iv_field_name = ls_mask-field_name ) <> abap_true.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid         = zcx_milo_validation=>mask_rule_invalid
+            mv_field_name  = ls_mask-field_name
+            mv_object_name = lv_obj_name.
+      ENDIF.
+    ENDLOOP.
+
   ENDMETHOD.
 
 
@@ -96,8 +121,13 @@ CLASS ZCL_MILO_CONFIG IMPLEMENTATION.
         AND is_active        = 'X'
       INTO @rv_max_rows.
 
-    IF sy-subrc <> 0 OR rv_max_rows IS INITIAL.
+    IF sy-subrc <> 0.
       rv_max_rows = 100.
+    ELSEIF rv_max_rows <= 0.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid         = zcx_milo_validation=>max_rows_config_invalid
+          mv_object_name = lv_obj_name.
     ENDIF.
 
   ENDMETHOD.
@@ -175,6 +205,21 @@ CLASS ZCL_MILO_CONFIG IMPLEMENTATION.
       INTO @DATA(lv_found).
 
     rv_exists = xsdbool( sy-subrc = 0 ).
+
+  ENDMETHOD.
+
+
+  METHOD get_object_type.
+
+    DATA lv_obj_name TYPE dd02l-tabname.
+
+    lv_obj_name = to_upper( condense( iv_obj_name ) ).
+
+    SELECT SINGLE tabclass
+      FROM dd02l
+      WHERE tabname  = @lv_obj_name
+        AND as4local = 'A'
+      INTO @rv_object_type.
 
   ENDMETHOD.
 ENDCLASS.

@@ -86,7 +86,9 @@ CLASS zcl_milo_executor DEFINITION
       IMPORTING
         is_parts           TYPE zcl_milo_sql_parser=>ty_query_parts
         iv_mask_profile_id TYPE zmilo_mask_profile_id
-        ir_data            TYPE REF TO data.
+        ir_data            TYPE REF TO data
+      RAISING
+        zcx_milo_validation.
 
     CLASS-METHODS get_join_field_type
       IMPORTING
@@ -692,10 +694,27 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
 
     IF ls_query-query_id IS INITIAL.
       DATA(lv_query_id_c32) = zcl_milo_result_repo=>result_id_to_c32( iv_query_id ).
-      RAISE EXCEPTION TYPE zcx_milo_validation
-        EXPORTING
-          textid          = zcx_milo_validation=>saved_query_not_found
-          mv_reference_id = lv_query_id_c32.
+      DATA(lv_access_state) = zcl_milo_query_repo=>get_query_access_state(
+        iv_query_id   = iv_query_id
+        iv_profile_id = iv_profile_id ).
+
+      CASE lv_access_state.
+        WHEN 'INACTIVE'.
+          RAISE EXCEPTION TYPE zcx_milo_validation
+            EXPORTING
+              textid          = zcx_milo_validation=>saved_query_inactive
+              mv_reference_id = lv_query_id_c32.
+        WHEN 'NOT_OWNER' OR 'ACCESS_DENIED'.
+          RAISE EXCEPTION TYPE zcx_milo_validation
+            EXPORTING
+              textid          = zcx_milo_validation=>saved_query_access_denied
+              mv_reference_id = lv_query_id_c32.
+        WHEN OTHERS.
+          RAISE EXCEPTION TYPE zcx_milo_validation
+            EXPORTING
+              textid          = zcx_milo_validation=>saved_query_not_found
+              mv_reference_id = lv_query_id_c32.
+      ENDCASE.
     ENDIF.
 
     lv_sql = CONV string( ls_query-query_text ).

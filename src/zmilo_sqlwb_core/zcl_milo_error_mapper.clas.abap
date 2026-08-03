@@ -196,10 +196,46 @@ CLASS ZCL_MILO_ERROR_MAPPER IMPLEMENTATION.
       rv_error_code = 'PAGE_SIZE_INVALID'.
     ELSEIF ls_t100key = zcx_milo_validation=>paging_offset_overflow.
       rv_error_code = 'PAGING_OFFSET_OVERFLOW'.
+    ELSEIF ls_t100key = zcx_milo_validation=>query_id_invalid.
+      rv_error_code = 'QUERY_ID_INVALID'.
     ELSEIF ls_t100key = zcx_milo_validation=>saved_query_not_found.
       rv_error_code = 'SAVED_QUERY_NOT_FOUND'.
+    ELSEIF ls_t100key = zcx_milo_validation=>saved_query_inactive.
+      rv_error_code = 'SAVED_QUERY_INACTIVE'.
+    ELSEIF ls_t100key = zcx_milo_validation=>saved_query_access_denied.
+      rv_error_code = 'SAVED_QUERY_ACCESS_DENIED'.
     ELSEIF ls_t100key = zcx_milo_validation=>saved_query_not_owner.
       rv_error_code = 'SAVED_QUERY_NOT_OWNER'.
+    ELSEIF ls_t100key = zcx_milo_validation=>query_name_required.
+      rv_error_code = 'QUERY_NAME_REQUIRED'.
+    ELSEIF ls_t100key = zcx_milo_validation=>query_visibility_invalid.
+      rv_error_code = 'QUERY_VISIBILITY_INVALID'.
+    ELSEIF ls_t100key = zcx_milo_validation=>result_id_invalid.
+      rv_error_code = 'RESULT_ID_INVALID'.
+    ELSEIF ls_t100key = zcx_milo_validation=>result_not_found_or_expired.
+      rv_error_code = 'RESULT_NOT_FOUND_OR_EXPIRED'.
+    ELSEIF ls_t100key = zcx_milo_validation=>result_access_denied.
+      rv_error_code = 'RESULT_ACCESS_DENIED'.
+    ELSEIF ls_t100key = zcx_milo_validation=>ddic_metadata_not_found.
+      rv_error_code = 'DDIC_METADATA_NOT_FOUND'.
+    ELSEIF ls_t100key = zcx_milo_validation=>ddic_field_metadata_not_found.
+      rv_error_code = 'DDIC_FIELD_METADATA_NOT_FOUND'.
+    ELSEIF ls_t100key = zcx_milo_validation=>whitelist_profile_not_found.
+      rv_error_code = 'WHITELIST_PROFILE_NOT_FOUND'.
+    ELSEIF ls_t100key = zcx_milo_validation=>mask_profile_not_found.
+      rv_error_code = 'MASK_PROFILE_NOT_FOUND'.
+    ELSEIF ls_t100key = zcx_milo_validation=>mask_rule_invalid.
+      rv_error_code = 'MASK_RULE_INVALID'.
+    ELSEIF ls_t100key = zcx_milo_validation=>max_rows_config_invalid.
+      rv_error_code = 'MAX_ROWS_CONFIG_INVALID'.
+    ELSEIF ls_t100key = zcx_milo_validation=>role_config_ambiguous.
+      rv_error_code = 'ROLE_CONFIG_AMBIGUOUS'.
+    ELSEIF ls_t100key = zcx_milo_validation=>result_config_invalid.
+      rv_error_code = 'RESULT_CONFIG_INVALID'.
+    ELSEIF ls_t100key = zcx_milo_validation=>unsupported_ddic_object_type.
+      rv_error_code = 'UNSUPPORTED_DDIC_OBJECT_TYPE'.
+    ELSEIF ls_t100key = zcx_milo_validation=>configuration_error.
+      rv_error_code = 'CONFIGURATION_ERROR'.
     ELSEIF ls_t100key = zcx_milo_validation=>query_execution_failed.
       rv_error_code = 'QUERY_EXECUTION_FAILED'.
     ELSEIF ls_t100key = zcx_milo_validation=>dynamic_sql_syntax_error.
@@ -246,6 +282,20 @@ CLASS ZCL_MILO_ERROR_MAPPER IMPLEMENTATION.
         rv_error_text = 'A technical identifier could not be generated'.
       WHEN 'INTERNAL_ERROR'.
         rv_error_text = 'An unexpected internal error occurred'.
+      WHEN 'WHITELIST_PROFILE_NOT_FOUND'.
+        rv_error_text = 'Whitelist profile configuration was not found'.
+      WHEN 'MASK_PROFILE_NOT_FOUND'.
+        rv_error_text = 'Mask profile configuration was not found'.
+      WHEN 'MASK_RULE_INVALID'.
+        rv_error_text = 'A field masking rule is invalid'.
+      WHEN 'MAX_ROWS_CONFIG_INVALID'.
+        rv_error_text = 'Maximum row configuration is invalid'.
+      WHEN 'ROLE_CONFIG_AMBIGUOUS'.
+        rv_error_text = 'More than one active role configuration was found'.
+      WHEN 'RESULT_CONFIG_INVALID'.
+        rv_error_text = 'Result storage configuration is invalid'.
+      WHEN 'CONFIGURATION_ERROR'.
+        rv_error_text = 'SQL Workbench configuration is incomplete'.
       WHEN OTHERS.
         rv_error_text = 'Query execution failed; review the request log'.
     ENDCASE.
@@ -288,6 +338,14 @@ CLASS ZCL_MILO_ERROR_MAPPER IMPLEMENTATION.
         OR 'LOG_WRITE_FAILED'
         OR 'UUID_GENERATION_FAILED'
         OR 'INTERNAL_ERROR'.
+        rv_technical = abap_true.
+      WHEN 'WHITELIST_PROFILE_NOT_FOUND'
+        OR 'MASK_PROFILE_NOT_FOUND'
+        OR 'MASK_RULE_INVALID'
+        OR 'MAX_ROWS_CONFIG_INVALID'
+        OR 'ROLE_CONFIG_AMBIGUOUS'
+        OR 'RESULT_CONFIG_INVALID'
+        OR 'CONFIGURATION_ERROR'.
         rv_technical = abap_true.
       WHEN OTHERS.
         rv_technical = abap_false.

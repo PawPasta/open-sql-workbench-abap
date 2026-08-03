@@ -226,7 +226,6 @@ CLASS zcl_milo_service DEFINITION
       RETURNING
         VALUE(rs_role) TYPE zmilo_role
 
-
       RAISING
         zcx_milo_validation.
 
@@ -258,7 +257,6 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
 
     lv_required_role = to_upper( condense( is_role-pfcg_role ) ).
 
-
     IF lv_required_role IS INITIAL.
       RAISE EXCEPTION TYPE zcx_milo_validation
         EXPORTING
@@ -280,11 +278,8 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
 
     SELECT SINGLE agr_name
       FROM agr_users
-
       WHERE uname    = @sy-uname
-
         AND agr_name = @lv_required_role
-
         AND from_dat <= @sy-datum
         AND to_dat   >= @sy-datum
       INTO @DATA(lv_pfcg_role)
@@ -302,17 +297,13 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
 
   METHOD build_result_columns.
 
-
     DATA ls_parts TYPE zcl_milo_sql_parser=>ty_query_parts.
-
 
     DATA lt_field TYPE tt_ddic_field.
 
     DATA lv_field_count TYPE i.
 
-
     DATA lv_column_position TYPE i.
-
 
     DATA lv_source_object TYPE zmilo_obj_name.
 
@@ -323,7 +314,6 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
     ls_parts = zcl_milo_sql_parser=>parse( iv_sql ).
 
     IF ls_parts-is_join = abap_true.
-
 
       LOOP AT ls_parts-fields INTO DATA(ls_join_field).
 
@@ -364,8 +354,9 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
             IF sy-subrc <> 0.
               RAISE EXCEPTION TYPE zcx_milo_validation
                 EXPORTING
-                  textid        = zcx_milo_validation=>invalid_field
-                  mv_field_name = ls_join_field-field_name.
+                  textid         = zcx_milo_validation=>ddic_field_metadata_not_found
+                  mv_field_name  = ls_join_field-field_name
+                  mv_object_name = lv_source_object.
             ENDIF.
 
             <ls_join_agg_column>-element   = ls_join_agg_ddic_field-rollname.
@@ -409,8 +400,9 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
         IF sy-subrc <> 0.
           RAISE EXCEPTION TYPE zcx_milo_validation
             EXPORTING
-              textid        = zcx_milo_validation=>invalid_field
-              mv_field_name = ls_join_field-field_name.
+              textid         = zcx_milo_validation=>ddic_field_metadata_not_found
+              mv_field_name  = ls_join_field-field_name
+              mv_object_name = lv_source_object.
         ENDIF.
 
         lv_column_position = lv_column_position + 1.
@@ -469,6 +461,7 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
 
       LOOP AT ls_parts-fields INTO DATA(ls_single_field).
 
+        "Explicit SELECT columns use result order, not their DDIC positions.
         lv_column_position = lv_column_position + 1.
 
         IF ls_single_field-is_aggregate = abap_true.
@@ -495,8 +488,9 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
             IF sy-subrc <> 0.
               RAISE EXCEPTION TYPE zcx_milo_validation
                 EXPORTING
-                  textid        = zcx_milo_validation=>invalid_field
-                  mv_field_name = ls_single_field-field_name.
+                  textid         = zcx_milo_validation=>ddic_field_metadata_not_found
+                  mv_field_name  = ls_single_field-field_name
+                  mv_object_name = ls_parts-table_name.
             ENDIF.
 
             <ls_single_agg_column>-element   = ls_single_agg_ddic_field-rollname.
@@ -518,22 +512,28 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
         READ TABLE lt_field INTO DATA(ls_single_ddic_field)
           WITH KEY fieldname = ls_single_field-field_name.
 
-        IF sy-subrc = 0.
-          APPEND INITIAL LINE TO rt_column ASSIGNING FIELD-SYMBOL(<ls_single_column>).
-          <ls_single_column>-result_id       = iv_result_id.
-          <ls_single_column>-column_position = lv_column_position.
-          <ls_single_column>-field_name      = ls_single_ddic_field-fieldname.
-          <ls_single_column>-json_key        = to_lower( ls_single_ddic_field-fieldname ).
-          <ls_single_column>-element         = ls_single_ddic_field-rollname.
-          <ls_single_column>-abap_type       = ls_single_ddic_field-datatype.
-          <ls_single_column>-length          = ls_single_ddic_field-leng.
-          <ls_single_column>-decimals        = ls_single_ddic_field-decimals.
-          <ls_single_column>-is_key          = ls_single_ddic_field-keyflag.
-          <ls_single_column>-column_label    = ls_single_ddic_field-ddtext.
-          <ls_single_column>-origin_type      = ls_single_ddic_field-origin_type.
-          <ls_single_column>-origin_structure = ls_single_ddic_field-origin_structure.
-          <ls_single_column>-include_depth    = ls_single_ddic_field-include_depth.
+        IF sy-subrc <> 0.
+          RAISE EXCEPTION TYPE zcx_milo_validation
+            EXPORTING
+              textid         = zcx_milo_validation=>ddic_field_metadata_not_found
+              mv_field_name  = ls_single_field-field_name
+              mv_object_name = ls_parts-table_name.
         ENDIF.
+
+        APPEND INITIAL LINE TO rt_column ASSIGNING FIELD-SYMBOL(<ls_single_column>).
+        <ls_single_column>-result_id       = iv_result_id.
+        <ls_single_column>-column_position = lv_column_position.
+        <ls_single_column>-field_name      = ls_single_ddic_field-fieldname.
+        <ls_single_column>-json_key        = to_lower( ls_single_ddic_field-fieldname ).
+        <ls_single_column>-element         = ls_single_ddic_field-rollname.
+        <ls_single_column>-abap_type       = ls_single_ddic_field-datatype.
+        <ls_single_column>-length          = ls_single_ddic_field-leng.
+        <ls_single_column>-decimals        = ls_single_ddic_field-decimals.
+        <ls_single_column>-is_key          = ls_single_ddic_field-keyflag.
+        <ls_single_column>-column_label    = ls_single_ddic_field-ddtext.
+        <ls_single_column>-origin_type      = ls_single_ddic_field-origin_type.
+        <ls_single_column>-origin_structure = ls_single_ddic_field-origin_structure.
+        <ls_single_column>-include_depth    = ls_single_ddic_field-include_depth.
 
       ENDLOOP.
 
@@ -544,13 +544,32 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
 
   METHOD get_active_role.
 
+    DATA lv_active_role_count TYPE i.
+
     IF iv_profile_id IS INITIAL.
       RAISE EXCEPTION TYPE zcx_milo_validation
         EXPORTING
           textid = zcx_milo_validation=>profile_required.
     ENDIF.
 
-    rs_role = zcl_milo_config=>get_role_config_any( iv_profile_id ).
+    SELECT COUNT( * )
+      FROM zmilo_role
+      WHERE profile_id = @iv_profile_id
+        AND is_active  = @abap_true
+      INTO @lv_active_role_count.
+
+    IF lv_active_role_count > 1.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid        = zcx_milo_validation=>role_config_ambiguous
+          mv_profile_id = iv_profile_id.
+    ENDIF.
+
+    IF lv_active_role_count = 1.
+      rs_role = zcl_milo_config=>get_role_config( iv_profile_id ).
+    ELSE.
+      rs_role = zcl_milo_config=>get_role_config_any( iv_profile_id ).
+    ENDIF.
 
     IF rs_role-profile_id IS INITIAL.
       RAISE EXCEPTION TYPE zcx_milo_validation
@@ -564,6 +583,41 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
         EXPORTING
           textid        = zcx_milo_validation=>profile_inactive
           mv_profile_id = iv_profile_id.
+    ENDIF.
+
+    IF rs_role-wlist_profile_id IS INITIAL.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid     = zcx_milo_validation=>configuration_error
+          mv_value_1 = CONV string( iv_profile_id ).
+    ENDIF.
+
+    SELECT SINGLE wlist_profile_id
+      FROM zmilo_wlist
+      WHERE wlist_profile_id = @rs_role-wlist_profile_id
+        AND is_active        = @abap_true
+      INTO @DATA(lv_wlist_profile_id).
+
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid     = zcx_milo_validation=>whitelist_profile_not_found
+          mv_value_1 = CONV string( rs_role-wlist_profile_id ).
+    ENDIF.
+
+    IF rs_role-mask_profile_id IS NOT INITIAL.
+      SELECT SINGLE mask_profile_id
+        FROM zmilo_mask
+        WHERE mask_profile_id = @rs_role-mask_profile_id
+          AND is_active       = @abap_true
+        INTO @DATA(lv_mask_profile_id).
+
+      IF sy-subrc <> 0.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid     = zcx_milo_validation=>mask_profile_not_found
+            mv_value_1 = CONV string( rs_role-mask_profile_id ).
+      ENDIF.
     ENDIF.
 
     assert_user_has_pfcg_role( rs_role ).
@@ -609,6 +663,15 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
         EXPORTING
           textid         = zcx_milo_validation=>object_not_found
           mv_object_name = lv_obj_name.
+    ENDIF.
+
+    DATA(lv_object_type) = zcl_milo_config=>get_object_type( lv_obj_name ).
+    IF lv_object_type <> 'TRANSP' AND lv_object_type <> 'VIEW'.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid         = zcx_milo_validation=>unsupported_ddic_object_type
+          mv_object_name = lv_obj_name
+          mv_value_1     = CONV string( lv_object_type ).
     ENDIF.
 
     IF zcl_milo_config=>is_object_allowed(
@@ -1008,7 +1071,6 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           mv_value_1 = CONV string( iv_page ).
     ENDIF.
 
-
     ls_role = get_active_role( iv_profile_id ).
 
     zcl_milo_executor=>execute_select(
@@ -1062,9 +1124,7 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
         rs_result-page = lv_page.
         rs_result-page_size = rs_result-max_rows.
         IF rs_result-page_size > 0.
-
           rs_result-total_pages = rs_result-total_rows DIV rs_result-page_size.
-
           IF rs_result-total_rows MOD rs_result-page_size <> 0.
             rs_result-total_pages = rs_result-total_pages + 1.
           ENDIF.
@@ -1221,10 +1281,28 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
 
     DATA ls_role TYPE zmilo_role.
     DATA lv_visibility TYPE zmilo_visibility.
+    DATA lv_query_name_check TYPE string.
 
     ls_role = get_active_role( iv_profile_id ).
+    lv_query_name_check = condense( CONV string( iv_query_name ) ).
+
+    IF lv_query_name_check IS INITIAL.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid = zcx_milo_validation=>query_name_required.
+    ENDIF.
 
     lv_visibility = to_upper( condense( iv_visibility ) ).
+
+    IF lv_visibility IS NOT INITIAL
+       AND lv_visibility <> 'PRIVATE'
+       AND lv_visibility <> 'PROFILE'
+       AND lv_visibility <> 'SHARED'.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid     = zcx_milo_validation=>query_visibility_invalid
+          mv_value_1 = CONV string( iv_visibility ).
+    ENDIF.
 
     IF lv_visibility = 'PROFILE' OR lv_visibility = 'SHARED'.
       lv_visibility = 'PROFILE'.
@@ -1308,10 +1386,22 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
         iv_query_id   = iv_query_id
         iv_profile_id = iv_profile_id ).
 
-      IF lv_access_state = 'NOT_OWNER'.
+      IF lv_access_state = 'NOT_OWNER' OR lv_access_state = 'ACCESSIBLE'.
         RAISE EXCEPTION TYPE zcx_milo_validation
           EXPORTING
             textid          = zcx_milo_validation=>saved_query_not_owner
+            mv_reference_id = lv_query_id_c32.
+      ENDIF.
+
+      IF lv_access_state = 'INACTIVE'.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid          = zcx_milo_validation=>saved_query_inactive
+            mv_reference_id = lv_query_id_c32.
+      ELSEIF lv_access_state = 'ACCESS_DENIED'.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid          = zcx_milo_validation=>saved_query_access_denied
             mv_reference_id = lv_query_id_c32.
       ENDIF.
 
@@ -1329,10 +1419,27 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
     DATA ls_role TYPE zmilo_role.
     DATA lv_visibility TYPE zmilo_visibility.
     DATA lv_updated TYPE abap_bool.
+    DATA lv_query_name_check TYPE string.
 
     ls_role = get_active_role( iv_profile_id ).
+    lv_query_name_check = condense( CONV string( iv_query_name ) ).
+
+    IF lv_query_name_check IS INITIAL.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid = zcx_milo_validation=>query_name_required.
+    ENDIF.
 
     lv_visibility = to_upper( condense( iv_visibility ) ).
+    IF lv_visibility IS NOT INITIAL
+       AND lv_visibility <> 'PRIVATE'
+       AND lv_visibility <> 'PROFILE'
+       AND lv_visibility <> 'SHARED'.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid     = zcx_milo_validation=>query_visibility_invalid
+          mv_value_1 = CONV string( iv_visibility ).
+    ENDIF.
     IF lv_visibility = 'PROFILE' OR lv_visibility = 'SHARED'.
       lv_visibility = 'PROFILE'.
     ELSE.
@@ -1354,10 +1461,22 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
         iv_query_id   = iv_query_id
         iv_profile_id = iv_profile_id ).
 
-      IF lv_access_state = 'NOT_OWNER'.
+      IF lv_access_state = 'NOT_OWNER' OR lv_access_state = 'ACCESSIBLE'.
         RAISE EXCEPTION TYPE zcx_milo_validation
           EXPORTING
             textid          = zcx_milo_validation=>saved_query_not_owner
+            mv_reference_id = lv_query_id_c32.
+      ENDIF.
+
+      IF lv_access_state = 'INACTIVE'.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid          = zcx_milo_validation=>saved_query_inactive
+            mv_reference_id = lv_query_id_c32.
+      ELSEIF lv_access_state = 'ACCESS_DENIED'.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid          = zcx_milo_validation=>saved_query_access_denied
             mv_reference_id = lv_query_id_c32.
       ENDIF.
 

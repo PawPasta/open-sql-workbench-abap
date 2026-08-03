@@ -141,7 +141,7 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
     IF lt_ddic_entry IS INITIAL.
       RAISE EXCEPTION TYPE zcx_milo_validation
         EXPORTING
-          textid         = zcx_milo_validation=>object_not_found
+          textid         = zcx_milo_validation=>ddic_metadata_not_found
           mv_object_name = lv_obj_name.
     ENDIF.
 

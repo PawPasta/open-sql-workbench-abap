@@ -1,4 +1,4 @@
-CLASS zcl_milo_masker DEFINITION
+CLASS ZCL_milo_MASKER DEFINITION
   PUBLIC
   FINAL
   CREATE PUBLIC .
@@ -9,7 +9,9 @@ CLASS zcl_milo_masker DEFINITION
       IMPORTING
         iv_mask_profile_id TYPE zmilo_mask_profile_id
         iv_obj_name        TYPE zmilo_obj_name
-        ir_data            TYPE REF TO data.
+        ir_data            TYPE REF TO data
+      RAISING
+        zcx_milo_validation.
 
   PROTECTED SECTION.
   PRIVATE SECTION.

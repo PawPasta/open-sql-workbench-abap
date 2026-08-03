@@ -40,7 +40,15 @@ CLASS zcl_milo_result_repo DEFINITION
         iv_page_no     TYPE i
         iv_rows_json   TYPE string
       RETURNING
-        VALUE(rt_page) TYPE tt_page.
+        VALUE(rt_page) TYPE tt_page
+      RAISING
+        zcx_milo_validation.
+
+    CLASS-METHODS get_result_access_state
+      IMPORTING
+        iv_result_id    TYPE sysuuid_x16
+      RETURNING
+        VALUE(rv_state) TYPE string.
 
     CLASS-METHODS get_head
       IMPORTING
@@ -93,6 +101,16 @@ CLASS ZCL_MILO_RESULT_REPO IMPLEMENTATION.
     DATA lv_payload_part TYPE string.
     DATA ls_page         TYPE zmilo_rpage.
     DATA lv_created_at   TYPE timestampl.
+    DATA lv_part_capacity TYPE i.
+
+    DESCRIBE FIELD ls_page-payload_part
+      LENGTH lv_part_capacity IN CHARACTER MODE.
+
+    IF c_chunk_size <= 0 OR c_chunk_size > lv_part_capacity.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid = zcx_milo_validation=>result_config_invalid.
+    ENDIF.
 
     lv_length = strlen( iv_rows_json ).
 
@@ -208,10 +226,8 @@ CLASS ZCL_MILO_RESULT_REPO IMPLEMENTATION.
 
   METHOD is_result_visible.
 
-    DATA ls_head TYPE zmilo_rhead.
-
-    ls_head = get_head( iv_result_id ).
-    rv_visible = xsdbool( ls_head-result_id IS NOT INITIAL ).
+    rv_visible = xsdbool(
+      get_result_access_state( iv_result_id ) = 'VISIBLE' ).
 
   ENDMETHOD.
 
@@ -361,6 +377,36 @@ CLASS ZCL_MILO_RESULT_REPO IMPLEMENTATION.
         ROLLBACK WORK.
         CLEAR rv_saved.
     ENDTRY.
+
+  ENDMETHOD.
+
+
+  METHOD get_result_access_state.
+
+    DATA lv_now TYPE timestampl.
+
+    SELECT SINGLE result_id,
+                  user_name,
+                  expires_at
+      FROM zmilo_rhead
+      WHERE result_id = @iv_result_id
+      INTO @DATA(ls_head).
+
+    IF sy-subrc <> 0.
+      rv_state = 'NOT_FOUND'.
+      RETURN.
+    ENDIF.
+
+    GET TIME STAMP FIELD lv_now.
+
+    IF ls_head-expires_at IS NOT INITIAL
+       AND ls_head-expires_at <= lv_now.
+      rv_state = 'EXPIRED'.
+    ELSEIF ls_head-user_name <> sy-uname.
+      rv_state = 'ACCESS_DENIED'.
+    ELSE.
+      rv_state = 'VISIBLE'.
+    ENDIF.
 
   ENDMETHOD.
 ENDCLASS.

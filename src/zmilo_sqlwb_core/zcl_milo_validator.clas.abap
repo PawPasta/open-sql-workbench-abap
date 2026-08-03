@@ -1044,6 +1044,22 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
             mv_object_name = ls_source-object_name.
       ENDIF.
 
+      DATA(lv_source_type) =
+        zcl_milo_config=>get_object_type( ls_source-object_name ).
+
+      IF lv_source_type IS INITIAL.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid         = zcx_milo_validation=>object_not_found
+            mv_object_name = ls_source-object_name.
+      ELSEIF lv_source_type <> 'TRANSP' AND lv_source_type <> 'VIEW'.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid         = zcx_milo_validation=>unsupported_ddic_object_type
+            mv_object_name = ls_source-object_name
+            mv_value_1     = CONV string( lv_source_type ).
+      ENDIF.
+
       IF zcl_milo_config=>is_object_allowed(
            iv_wlist_profile_id = iv_wlist_profile_id
            iv_obj_name         = ls_source-object_name ) <> abap_true.
@@ -1529,7 +1545,7 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
     CLEAR ev_object_name.
 
     lv_sql = condense( iv_sql ).
-    lv_sql = to_upper( lv_sql ).
+    lv_sql = zcl_milo_sql_parser=>uppercase_outside_literals( lv_sql ).
 
     IF lv_sql IS INITIAL.
       RAISE EXCEPTION TYPE zcx_milo_validation
@@ -1617,6 +1633,21 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
     "========================
     " WHITELIST CHECK
     "========================
+
+    DATA(lv_object_type) = zcl_milo_config=>get_object_type( ev_object_name ).
+
+    IF lv_object_type IS INITIAL.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid         = zcx_milo_validation=>object_not_found
+          mv_object_name = ev_object_name.
+    ELSEIF lv_object_type <> 'TRANSP' AND lv_object_type <> 'VIEW'.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid         = zcx_milo_validation=>unsupported_ddic_object_type
+          mv_object_name = ev_object_name
+          mv_value_1     = CONV string( lv_object_type ).
+    ENDIF.
 
     IF zcl_milo_config=>is_object_allowed(
          iv_wlist_profile_id = iv_wlist_profile_id

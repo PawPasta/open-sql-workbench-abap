@@ -23,6 +23,8 @@ CLASS zcl_milo_sql_parser DEFINITION
 
     TYPES tt_join TYPE STANDARD TABLE OF ty_join WITH EMPTY KEY.
 
+    "Tạo type đại diện cho thông tin từng field sau khi prase SQL
+    "Ví dụ SELECT CARRID, CONNID FROM SFLIGHT thì có 3 field là CARRID và CONNID
     TYPES:
       BEGIN OF ty_select_field,
         source_alias TYPE string,
@@ -33,9 +35,10 @@ CLASS zcl_milo_sql_parser DEFINITION
         is_distinct  TYPE abap_bool,
       END OF ty_select_field.
 
-
+    "Tạo danh sách chứa các type field
     TYPES tt_select_field TYPE STANDARD TABLE OF ty_select_field WITH EMPTY KEY.
 
+    "Tạo type chứa các parts của sql sau khi được prase
     TYPES:
       BEGIN OF ty_query_parts,
         table_name TYPE zmilo_obj_name,
@@ -66,6 +69,12 @@ CLASS zcl_milo_sql_parser DEFINITION
         VALUE(rv_order) TYPE string.
 
     CLASS-METHODS normalize_count_distinct_sql
+      IMPORTING
+        iv_sql        TYPE string
+      RETURNING
+        VALUE(rv_sql) TYPE string.
+
+    CLASS-METHODS uppercase_outside_literals
       IMPORTING
         iv_sql        TYPE string
       RETURNING
@@ -149,7 +158,6 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
     DATA lv_quote_count TYPE i.
     DATA lv_clause_count TYPE i.
 
-
     lv_sql = iv_sql.
 
     REPLACE ALL OCCURRENCES OF cl_abap_char_utilities=>cr_lf IN lv_sql WITH space.
@@ -165,7 +173,7 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
     REPLACE ALL OCCURRENCES OF '%0D' IN lv_sql WITH space.
     REPLACE ALL OCCURRENCES OF '%0d' IN lv_sql WITH space.
     lv_sql = condense( lv_sql ).
-    lv_sql = to_upper( lv_sql ).
+    lv_sql = uppercase_outside_literals( lv_sql ).
 
     CLEAR rs_parts.
 
@@ -320,11 +328,9 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
           mv_clause_name = 'ORDER BY'.
     ENDIF.
 
-
     FIND PCRE '^SELECT[[:space:]]+(.+?)[[:space:]]+FROM[[:space:]]+(.+?)([[:space:]]+WHERE[[:space:]]+|[[:space:]]+GROUP[[:space:]]+BY[[:space:]]+|[[:space:]]+HAVING[[:space:]]+|[[:space:]]+ORDER[[:space:]]+BY[[:space:]]+|$)'
       IN lv_sql
       SUBMATCHES lv_cols lv_from.
-
 
     IF sy-subrc <> 0 OR lv_cols IS INITIAL OR lv_from IS INITIAL.
       RAISE EXCEPTION TYPE zcx_milo_validation
@@ -332,12 +338,9 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
           textid = zcx_milo_validation=>parse_failed.
     ENDIF.
 
-
     rs_parts-columns    = condense( lv_cols ).
     rs_parts-from_sql   = condense( lv_from ).
-
     REPLACE ALL OCCURRENCES OF ' LEFT JOIN ' IN rs_parts-from_sql WITH ' LEFT OUTER JOIN '.
-
 
     IF rs_parts-from_sql CS ' JOIN '.
 
@@ -533,7 +536,6 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
       IF lv_match_len >= strlen( lv_rest ).
         CLEAR lv_rest.
       ELSE.
-
         lv_rest = substring(
           val = lv_rest
           off = lv_match_len ).
@@ -815,6 +817,8 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
   METHOD normalize_count_distinct_sql.
 
     rv_sql = condense( iv_sql ).
+
+    "Backtick string literals preserve the trailing blank after "(".
     REPLACE ALL OCCURRENCES OF ` )` IN rv_sql WITH `)`.
     REPLACE ALL OCCURRENCES OF `COUNT(` IN rv_sql WITH `COUNT( `.
     REPLACE ALL OCCURRENCES OF `SUM(` IN rv_sql WITH `SUM( `.
@@ -822,6 +826,34 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
     REPLACE ALL OCCURRENCES OF `MIN(` IN rv_sql WITH `MIN( `.
     REPLACE ALL OCCURRENCES OF `MAX(` IN rv_sql WITH `MAX( `.
     REPLACE ALL OCCURRENCES OF `)` IN rv_sql WITH ` )`.
+
+  ENDMETHOD.
+
+
+  METHOD uppercase_outside_literals.
+
+    DATA lv_offset     TYPE i.
+    DATA lv_length     TYPE i.
+    DATA lv_character  TYPE string.
+    DATA lv_in_literal TYPE abap_bool.
+    DATA lv_source_sql TYPE string.
+
+    lv_source_sql = iv_sql.
+    CLEAR rv_sql.
+    lv_length = strlen( lv_source_sql ).
+
+    WHILE lv_offset < lv_length.
+      lv_character = lv_source_sql+lv_offset(1).
+
+      IF lv_character = ''''.
+        lv_in_literal = xsdbool( lv_in_literal <> abap_true ).
+      ELSEIF lv_in_literal <> abap_true.
+        TRANSLATE lv_character TO UPPER CASE.
+      ENDIF.
+
+      rv_sql = rv_sql && lv_character.
+      lv_offset = lv_offset + 1.
+    ENDWHILE.
 
   ENDMETHOD.
 ENDCLASS.

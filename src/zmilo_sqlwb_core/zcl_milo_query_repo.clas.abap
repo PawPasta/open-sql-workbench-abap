@@ -269,19 +269,24 @@ CLASS ZCL_MILO_QUERY_REPO IMPLEMENTATION.
 
     SELECT SINGLE owner,
                   profile_id,
+                  visibility,
                   is_active
       FROM zmilo_query
       WHERE query_id = @iv_query_id
       INTO @DATA(ls_query_access).
 
-    IF sy-subrc <> 0
-       OR ls_query_access-is_active <> abap_true
-       OR ls_query_access-profile_id <> iv_profile_id.
+    IF sy-subrc <> 0.
       rv_state = 'NOT_FOUND'.
-    ELSEIF ls_query_access-owner <> sy-uname.
-      rv_state = 'NOT_OWNER'.
-    ELSE.
+    ELSEIF ls_query_access-is_active <> abap_true.
+      rv_state = 'INACTIVE'.
+    ELSEIF ls_query_access-profile_id <> iv_profile_id.
+      rv_state = 'ACCESS_DENIED'.
+    ELSEIF ls_query_access-owner = sy-uname.
       rv_state = 'OWNER'.
+    ELSEIF ls_query_access-visibility = 'PROFILE'.
+      rv_state = 'ACCESSIBLE'.
+    ELSE.
+      rv_state = 'NOT_OWNER'.
     ENDIF.
 
   ENDMETHOD.
