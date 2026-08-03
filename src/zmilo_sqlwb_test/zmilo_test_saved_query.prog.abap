@@ -1,5 +1,5 @@
 *&---------------------------------------------------------------------*
-*& Report ZMILO_TEST_SAVED_QUERY
+*& Report Zmilo_TEST_SAVED_QUERY
 *&---------------------------------------------------------------------*
 *&
 *&---------------------------------------------------------------------*
@@ -42,8 +42,20 @@ START-OF-SELECTION.
           ENDIF.
 
         CATCH zcx_milo_validation INTO DATA(lx_save).
-          WRITE: / 'STATUS: BLOCKED'.
-          WRITE: / 'ERROR:', lx_save->get_text( ).
+          DATA(lv_save_error_code) =
+            zcl_milo_error_mapper=>get_validation_error_code( lx_save ).
+          IF zcl_milo_error_mapper=>is_technical_error_code(
+               lv_save_error_code ) = abap_true.
+            DATA(lv_save_safe_text) =
+              zcl_milo_error_mapper=>get_safe_technical_text(
+                lv_save_error_code ).
+            WRITE: / 'STATUS: ERROR'.
+            WRITE: / 'ERROR:', lv_save_safe_text.
+          ELSE.
+            WRITE: / 'STATUS: BLOCKED'.
+            WRITE: / 'ERROR:', lx_save->get_text( ).
+          ENDIF.
+          WRITE: / 'ERROR CODE:', lv_save_error_code.
       ENDTRY.
 
     WHEN 'LIST'.
@@ -63,6 +75,7 @@ START-OF-SELECTION.
             WRITE: / 'OWNER:', ls_query-owner.
             WRITE: / 'NAME:', ls_query-query_name.
             WRITE: / 'VISIBILITY:', ls_query-visibility.
+            WRITE: / 'PROFILE:', ls_query-profile_id.
             WRITE: / 'TAGS:', ls_query-tags.
             WRITE: / 'DESCRIPTION:', ls_query-description.
             WRITE: / 'CREATED DATE:', ls_query-created_date.
@@ -102,8 +115,63 @@ START-OF-SELECTION.
         WRITE: / ls_result-rows_json.
       ENDIF.
 
+    WHEN 'UPDATE'.
+      TRY.
+          zcl_milo_service=>update_query(
+            iv_profile_id  = p_prof
+            iv_query_id    = p_qid
+            iv_query_name  = p_name
+            iv_query_text  = p_sql
+            iv_visibility  = p_vis
+            iv_tags        = p_tags
+            iv_description = p_desc ).
+
+          WRITE: / 'UPDATED QUERY ID:', p_qid.
+
+        CATCH zcx_milo_validation INTO DATA(lx_update).
+          DATA(lv_update_error_code) =
+            zcl_milo_error_mapper=>get_validation_error_code( lx_update ).
+          IF zcl_milo_error_mapper=>is_technical_error_code(
+               lv_update_error_code ) = abap_true.
+            DATA(lv_update_safe_text) =
+              zcl_milo_error_mapper=>get_safe_technical_text(
+                lv_update_error_code ).
+            WRITE: / 'STATUS: ERROR'.
+            WRITE: / 'ERROR:', lv_update_safe_text.
+          ELSE.
+            WRITE: / 'STATUS: BLOCKED'.
+            WRITE: / 'ERROR:', lx_update->get_text( ).
+          ENDIF.
+          WRITE: / 'ERROR CODE:', lv_update_error_code.
+      ENDTRY.
+
+    WHEN 'DELETE'.
+      TRY.
+          zcl_milo_service=>delete_query(
+            iv_profile_id = p_prof
+            iv_query_id   = p_qid ).
+
+          WRITE: / 'DEACTIVATED QUERY ID:', p_qid.
+
+        CATCH zcx_milo_validation INTO DATA(lx_delete).
+          DATA(lv_delete_error_code) =
+            zcl_milo_error_mapper=>get_validation_error_code( lx_delete ).
+          IF zcl_milo_error_mapper=>is_technical_error_code(
+               lv_delete_error_code ) = abap_true.
+            DATA(lv_delete_safe_text) =
+              zcl_milo_error_mapper=>get_safe_technical_text(
+                lv_delete_error_code ).
+            WRITE: / 'STATUS: ERROR'.
+            WRITE: / 'ERROR:', lv_delete_safe_text.
+          ELSE.
+            WRITE: / 'STATUS: BLOCKED'.
+            WRITE: / 'ERROR:', lx_delete->get_text( ).
+          ENDIF.
+          WRITE: / 'ERROR CODE:', lv_delete_error_code.
+      ENDTRY.
+
     WHEN OTHERS.
       WRITE: / 'UNKNOWN ACTION:', p_act.
-      WRITE: / 'VALID ACTIONS: SAVE, LIST, RUN'.
+      WRITE: / 'VALID ACTIONS: SAVE, LIST, RUN, UPDATE, DELETE'.
 
   ENDCASE.

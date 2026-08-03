@@ -1,5 +1,5 @@
 *&---------------------------------------------------------------------*
-*& Report ZMILO_TEST_EXECUTOR
+*& Report Zmilo_TEST_EXECUTOR
 *&---------------------------------------------------------------------*
 *&
 *&---------------------------------------------------------------------*
@@ -18,6 +18,8 @@ START-OF-SELECTION.
       DATA lv_max_rows  TYPE i.
       DATA lv_truncated TYPE abap_bool.
       DATA lv_json TYPE string.
+      DATA lv_error_code TYPE zmilo_error_code.
+      DATA lv_error_text TYPE string.
 
       ls_role = zcl_milo_config=>get_role_config( p_prof ).
 
@@ -37,7 +39,9 @@ START-OF-SELECTION.
           ev_status           = lv_status
           ev_max_rows         = lv_max_rows
           ev_truncated        = lv_truncated
-          ev_rows_json        = lv_json ).
+          ev_rows_json        = lv_json
+          ev_error_code       = lv_error_code
+          ev_error_text       = lv_error_text ).
 
       WRITE: / 'PROFILE:', p_prof.
       WRITE: / 'WLIST:', ls_role-wlist_profile_id.
@@ -47,6 +51,8 @@ START-OF-SELECTION.
       WRITE: / 'ROWS:', lv_count.
       WRITE: / 'MAX ROWS:', lv_max_rows.
       WRITE: / 'TRUNCATED:', lv_truncated.
+      WRITE: / 'ERROR CODE:', lv_error_code.
+      WRITE: / 'ERROR TEXT:', lv_error_text.
       WRITE: / 'JSON:'.
       WRITE: / lv_json.
 
