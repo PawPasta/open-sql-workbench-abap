@@ -44,6 +44,11 @@ CLASS ZCL_MILO_LOGGER IMPLEMENTATION.
         CLEAR: rv_log_id, ls_log-request_id.
     ENDTRY.
 
+    IF rv_log_id IS INITIAL OR ls_log-request_id IS INITIAL.
+      CLEAR rv_log_id.
+      RETURN.
+    ENDIF.
+
     ls_log-mandt       = sy-mandt.
     ls_log-log_id      = rv_log_id.
     ls_log-user_name   = sy-uname.
@@ -73,16 +78,22 @@ CLASS ZCL_MILO_LOGGER IMPLEMENTATION.
       ENDCASE.
     ENDIF.
 
-    CLEAR rv_log_id.
+    TRY.
+        INSERT zmilo_log FROM @ls_log.
 
-    INSERT zmilo_log FROM @ls_log.
+        IF sy-subrc <> 0.
+          ROLLBACK WORK.
+          CLEAR rv_log_id.
+          RETURN.
+        ENDIF.
 
-    IF sy-subrc <> 0.
-      CLEAR rv_log_id.
-    ELSE.
-      rv_log_id = ls_log-log_id.
-      COMMIT WORK AND WAIT.
-    ENDIF.
+        COMMIT WORK AND WAIT.
+        rv_log_id = ls_log-log_id.
+
+      CATCH cx_sy_open_sql_db.
+        ROLLBACK WORK.
+        CLEAR rv_log_id.
+    ENDTRY.
 
   ENDMETHOD.
 ENDCLASS.

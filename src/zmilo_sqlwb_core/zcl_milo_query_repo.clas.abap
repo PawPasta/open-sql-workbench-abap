@@ -14,7 +14,9 @@ CLASS zcl_milo_query_repo DEFINITION
         iv_tags            TYPE zmilo_tags OPTIONAL
         iv_description     TYPE zmilo_description OPTIONAL
       RETURNING
-        VALUE(rv_query_id) TYPE sysuuid_x16.
+        VALUE(rv_query_id) TYPE sysuuid_x16
+      RAISING
+        zcx_milo_validation.
 
     CLASS-METHODS get_query
       IMPORTING
@@ -40,14 +42,18 @@ CLASS zcl_milo_query_repo DEFINITION
         iv_tags           TYPE zmilo_tags OPTIONAL
         iv_description    TYPE zmilo_description OPTIONAL
       RETURNING
-        VALUE(rv_updated) TYPE abap_bool.
+        VALUE(rv_updated) TYPE abap_bool
+      RAISING
+        zcx_milo_validation.
 
     CLASS-METHODS deactivate_query
       IMPORTING
         iv_query_id       TYPE sysuuid_x16
         iv_profile_id     TYPE zmilo_profile_id
       RETURNING
-        VALUE(rv_deleted) TYPE abap_bool.
+        VALUE(rv_deleted) TYPE abap_bool
+      RAISING
+        zcx_milo_validation.
 
     TYPES tt_query TYPE STANDARD TABLE OF zmilo_query WITH EMPTY KEY.
 
@@ -129,9 +135,18 @@ CLASS ZCL_MILO_QUERY_REPO IMPLEMENTATION.
 
     TRY.
         rv_query_id = cl_system_uuid=>create_uuid_x16_static( ).
-      CATCH cx_uuid_error.
-        CLEAR rv_query_id.
+      CATCH cx_uuid_error INTO DATA(lx_uuid).
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid   = zcx_milo_validation=>uuid_generation_failed
+            previous = lx_uuid.
     ENDTRY.
+
+    IF rv_query_id IS INITIAL.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid = zcx_milo_validation=>uuid_generation_failed.
+    ENDIF.
 
     ls_query-mandt            = sy-mandt.
     ls_query-query_id         = rv_query_id.
@@ -156,11 +171,25 @@ CLASS ZCL_MILO_QUERY_REPO IMPLEMENTATION.
     ls_query-created_date = sy-datum.
     ls_query-created_time = sy-uzeit.
 
-    INSERT zmilo_query FROM @ls_query.
+    TRY.
+        INSERT zmilo_query FROM @ls_query.
 
-    IF sy-subrc = 0.
-      COMMIT WORK AND WAIT.
-    ENDIF.
+        IF sy-subrc <> 0.
+          ROLLBACK WORK.
+          RAISE EXCEPTION TYPE zcx_milo_validation
+            EXPORTING
+              textid = zcx_milo_validation=>query_storage_failed.
+        ENDIF.
+
+        COMMIT WORK AND WAIT.
+
+      CATCH cx_sy_open_sql_db INTO DATA(lx_save_sql).
+        ROLLBACK WORK.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid   = zcx_milo_validation=>query_storage_failed
+            previous = lx_save_sql.
+    ENDTRY.
 
   ENDMETHOD.
 
@@ -171,17 +200,26 @@ CLASS ZCL_MILO_QUERY_REPO IMPLEMENTATION.
 
     CLEAR rv_deleted.
 
-    UPDATE zmilo_query
-      SET is_active = @lv_inactive
-      WHERE query_id  = @iv_query_id
-        AND owner     = @sy-uname
-        AND profile_id = @iv_profile_id
-        AND is_active = 'X'.
+    TRY.
+        UPDATE zmilo_query
+          SET is_active = @lv_inactive
+          WHERE query_id  = @iv_query_id
+            AND owner     = @sy-uname
+            AND profile_id = @iv_profile_id
+            AND is_active = 'X'.
 
-    IF sy-subrc = 0.
-      rv_deleted = abap_true.
-      COMMIT WORK AND WAIT.
-    ENDIF.
+        IF sy-subrc = 0.
+          rv_deleted = abap_true.
+          COMMIT WORK AND WAIT.
+        ENDIF.
+
+      CATCH cx_sy_open_sql_db INTO DATA(lx_delete_sql).
+        ROLLBACK WORK.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid   = zcx_milo_validation=>query_storage_failed
+            previous = lx_delete_sql.
+    ENDTRY.
 
   ENDMETHOD.
 
@@ -199,21 +237,30 @@ CLASS ZCL_MILO_QUERY_REPO IMPLEMENTATION.
       lv_visibility = 'PRIVATE'.
     ENDIF.
 
-    UPDATE zmilo_query
-      SET query_name  = @iv_query_name,
-          query_text  = @iv_query_text,
-          visibility  = @lv_visibility,
-          tags        = @iv_tags,
-          description = @iv_description
-      WHERE query_id  = @iv_query_id
-        AND owner     = @sy-uname
-        AND profile_id = @iv_profile_id
-        AND is_active = 'X'.
+    TRY.
+        UPDATE zmilo_query
+          SET query_name  = @iv_query_name,
+              query_text  = @iv_query_text,
+              visibility  = @lv_visibility,
+              tags        = @iv_tags,
+              description = @iv_description
+          WHERE query_id  = @iv_query_id
+            AND owner     = @sy-uname
+            AND profile_id = @iv_profile_id
+            AND is_active = 'X'.
 
-    IF sy-subrc = 0.
-      rv_updated = abap_true.
-      COMMIT WORK AND WAIT.
-    ENDIF.
+        IF sy-subrc = 0.
+          rv_updated = abap_true.
+          COMMIT WORK AND WAIT.
+        ENDIF.
+
+      CATCH cx_sy_open_sql_db INTO DATA(lx_update_sql).
+        ROLLBACK WORK.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid   = zcx_milo_validation=>query_storage_failed
+            previous = lx_update_sql.
+    ENDTRY.
 
   ENDMETHOD.
 

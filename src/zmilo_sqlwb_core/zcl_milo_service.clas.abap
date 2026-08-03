@@ -26,7 +26,7 @@ CLASS zcl_milo_service DEFINITION
         columns_json  TYPE string,
         rows_json     TYPE string,
         csv           TYPE string,
-        error_code    TYPE string,
+        error_code    TYPE zmilo_error_code,
         error_text    TYPE string,
       END OF ty_run_result.
 
@@ -55,6 +55,8 @@ CLASS zcl_milo_service DEFINITION
         ev_max_rows      TYPE i
         ev_truncated     TYPE abap_bool
         ev_rows_json     TYPE string
+        ev_error_code    TYPE zmilo_error_code
+        ev_error_text    TYPE string
       RAISING
         zcx_milo_validation.
 
@@ -79,6 +81,8 @@ CLASS zcl_milo_service DEFINITION
         ev_max_rows      TYPE i
         ev_truncated     TYPE abap_bool
         ev_rows_json     TYPE string
+        ev_error_code    TYPE zmilo_error_code
+        ev_error_text    TYPE string
       RAISING
         zcx_milo_validation.
 
@@ -222,6 +226,7 @@ CLASS zcl_milo_service DEFINITION
       RETURNING
         VALUE(rs_role) TYPE zmilo_role
 
+
       RAISING
         zcx_milo_validation.
 
@@ -261,7 +266,6 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           mv_profile_id = is_role-profile_id.
     ENDIF.
 
-
     SELECT SINGLE agr_name
       FROM agr_define
       WHERE agr_name = @lv_required_role
@@ -285,7 +289,6 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
         AND to_dat   >= @sy-datum
       INTO @DATA(lv_pfcg_role)
       BYPASSING BUFFER.
-
 
     IF sy-subrc <> 0.
       RAISE EXCEPTION TYPE zcx_milo_validation
@@ -313,13 +316,11 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
 
     DATA lv_source_object TYPE zmilo_obj_name.
 
-
     DATA lv_output_field TYPE zmilo_field_name.
 
     CLEAR rt_column.
 
     ls_parts = zcl_milo_sql_parser=>parse( iv_sql ).
-
 
     IF ls_parts-is_join = abap_true.
 
@@ -340,11 +341,10 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           IF ls_join_field-agg_func = 'COUNT'.
             <ls_join_agg_column>-abap_type = 'INT4'.
             <ls_join_agg_column>-length    = 10.
-          ELSEIF ls_join_field-agg_func = 'AVG'
-             OR ls_join_field-agg_func = 'SUM'.
-            <ls_join_agg_column>-abap_type = 'DF34'.
-            <ls_join_agg_column>-length    = 34.
-            <ls_join_agg_column>-decimals  = 14.
+          ELSEIF ls_join_field-agg_func = 'AVG'.
+            <ls_join_agg_column>-abap_type = 'FLTP'.
+            <ls_join_agg_column>-length    = 16.
+            <ls_join_agg_column>-decimals  = 16.
           ELSE.
             CLEAR lv_source_object.
             LOOP AT ls_parts-sources INTO DATA(ls_agg_source).
@@ -469,9 +469,10 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
 
       LOOP AT ls_parts-fields INTO DATA(ls_single_field).
 
+        lv_column_position = lv_column_position + 1.
+
         IF ls_single_field-is_aggregate = abap_true.
 
-          lv_column_position = lv_column_position + 1.
           lv_output_field = to_upper( ls_single_field-output_key ).
 
           APPEND INITIAL LINE TO rt_column ASSIGNING FIELD-SYMBOL(<ls_single_agg_column>).
@@ -483,11 +484,10 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           IF ls_single_field-agg_func = 'COUNT'.
             <ls_single_agg_column>-abap_type = 'INT4'.
             <ls_single_agg_column>-length    = 10.
-          ELSEIF ls_single_field-agg_func = 'AVG'
-             OR ls_single_field-agg_func = 'SUM'.
-            <ls_single_agg_column>-abap_type = 'DF34'.
-            <ls_single_agg_column>-length    = 34.
-            <ls_single_agg_column>-decimals  = 14.
+          ELSEIF ls_single_field-agg_func = 'AVG'.
+            <ls_single_agg_column>-abap_type = 'FLTP'.
+            <ls_single_agg_column>-length    = 16.
+            <ls_single_agg_column>-decimals  = 16.
           ELSE.
             READ TABLE lt_field INTO DATA(ls_single_agg_ddic_field)
               WITH KEY fieldname = ls_single_field-field_name.
@@ -521,7 +521,7 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
         IF sy-subrc = 0.
           APPEND INITIAL LINE TO rt_column ASSIGNING FIELD-SYMBOL(<ls_single_column>).
           <ls_single_column>-result_id       = iv_result_id.
-          <ls_single_column>-column_position = ls_single_ddic_field-position.
+          <ls_single_column>-column_position = lv_column_position.
           <ls_single_column>-field_name      = ls_single_ddic_field-fieldname.
           <ls_single_column>-json_key        = to_lower( ls_single_ddic_field-fieldname ).
           <ls_single_column>-element         = ls_single_ddic_field-rollname.
@@ -584,7 +584,14 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
       iv_profile_id = iv_profile_id
       iv_obj_name   = iv_obj_name ).
 
-    rv_json = zcl_milo_serializer=>fields_to_json( lt_field ).
+    TRY.
+        rv_json = zcl_milo_serializer=>fields_to_json( lt_field ).
+      CATCH cx_root INTO DATA(lx_serialization).
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid   = zcx_milo_validation=>result_serialization_failed
+            previous = lx_serialization.
+    ENDTRY.
 
   ENDMETHOD.
 
@@ -670,6 +677,9 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
     DATA lv_row_limit_eff TYPE i.
     DATA lv_log_text TYPE string.
     DATA lv_log_obj TYPE zmilo_obj_name.
+    DATA lv_log_id TYPE sysuuid_x16.
+    DATA lv_error_code TYPE zmilo_error_code.
+    DATA lv_error_status TYPE zmilo_status.
 
     CLEAR: ev_object_name,
            ev_row_count,
@@ -713,7 +723,7 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           tstmp1 = lv_end
           tstmp2 = lv_start ) * 1000.
 
-        zcl_milo_logger=>log_execution(
+        lv_log_id = zcl_milo_logger=>log_execution(
           iv_sql_text      = lv_log_text
           iv_status        = 'SUCCESS'
           iv_exec_mode     = 'PREVIEW'
@@ -725,15 +735,30 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           iv_duration_ms   = lv_dur
           iv_result_bytes  = strlen( ev_rows_json ) ).
 
+        IF lv_log_id IS INITIAL.
+          RAISE EXCEPTION TYPE zcx_milo_validation
+            EXPORTING
+              textid = zcx_milo_validation=>log_write_failed.
+        ENDIF.
+
       CATCH zcx_milo_validation INTO DATA(lx_validation).
         GET TIME STAMP FIELD lv_end.
         lv_dur = cl_abap_tstmp=>subtract(
           tstmp1 = lv_end
           tstmp2 = lv_start ) * 1000.
 
+        lv_error_code =
+          zcl_milo_error_mapper=>get_validation_error_code( lx_validation ).
+        IF zcl_milo_error_mapper=>is_technical_error_code(
+             lv_error_code ) = abap_true.
+          lv_error_status = 'ERROR'.
+        ELSE.
+          lv_error_status = 'BLOCKED'.
+        ENDIF.
+
         zcl_milo_logger=>log_execution(
           iv_sql_text      = lv_log_text
-          iv_status        = 'BLOCKED'
+          iv_status        = lv_error_status
           iv_exec_mode     = 'PREVIEW'
           iv_source_obj    = lv_log_obj
           iv_row_count     = 0
@@ -742,8 +767,7 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           iv_truncated     = abap_false
           iv_duration_ms   = lv_dur
           iv_result_bytes  = 0
-          iv_error_code    =
-            zcl_milo_error_mapper=>get_validation_error_code( lx_validation )
+          iv_error_code    = lv_error_code
           iv_error_text    = lx_validation->get_text( ) ).
 
         RAISE EXCEPTION lx_validation.
@@ -761,6 +785,9 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
     DATA lv_row_limit_eff TYPE i.
     DATA lv_log_text TYPE string.
     DATA lv_log_obj TYPE zmilo_obj_name.
+    DATA lv_log_id TYPE sysuuid_x16.
+    DATA lv_error_code TYPE zmilo_error_code.
+    DATA lv_error_status TYPE zmilo_status.
 
     CLEAR: ev_object_name,
            ev_row_count,
@@ -804,7 +831,7 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           tstmp1 = lv_end
           tstmp2 = lv_start ) * 1000.
 
-        zcl_milo_logger=>log_execution(
+        lv_log_id = zcl_milo_logger=>log_execution(
           iv_sql_text      = lv_log_text
           iv_status        = 'SUCCESS'
           iv_exec_mode     = 'EXPORT'
@@ -816,15 +843,30 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           iv_duration_ms   = lv_dur
           iv_result_bytes  = strlen( ev_csv ) ).
 
+        IF lv_log_id IS INITIAL.
+          RAISE EXCEPTION TYPE zcx_milo_validation
+            EXPORTING
+              textid = zcx_milo_validation=>log_write_failed.
+        ENDIF.
+
       CATCH zcx_milo_validation INTO DATA(lx_validation).
         GET TIME STAMP FIELD lv_end.
         lv_dur = cl_abap_tstmp=>subtract(
           tstmp1 = lv_end
           tstmp2 = lv_start ) * 1000.
 
+        lv_error_code =
+          zcl_milo_error_mapper=>get_validation_error_code( lx_validation ).
+        IF zcl_milo_error_mapper=>is_technical_error_code(
+             lv_error_code ) = abap_true.
+          lv_error_status = 'ERROR'.
+        ELSE.
+          lv_error_status = 'BLOCKED'.
+        ENDIF.
+
         zcl_milo_logger=>log_execution(
           iv_sql_text      = lv_log_text
-          iv_status        = 'BLOCKED'
+          iv_status        = lv_error_status
           iv_exec_mode     = 'EXPORT'
           iv_source_obj    = lv_log_obj
           iv_row_count     = 0
@@ -833,8 +875,7 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           iv_truncated     = abap_false
           iv_duration_ms   = lv_dur
           iv_result_bytes  = 0
-          iv_error_code    =
-            zcl_milo_error_mapper=>get_validation_error_code( lx_validation )
+          iv_error_code    = lv_error_code
           iv_error_text    = lx_validation->get_text( ) ).
 
         RAISE EXCEPTION lx_validation.
@@ -910,19 +951,37 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           APPEND ls_star_field TO lt_result_field.
         ENDLOOP.
 
-        rs_result-columns_json = zcl_milo_serializer=>fields_to_json( lt_result_field ).
+        TRY.
+            rs_result-columns_json =
+              zcl_milo_serializer=>fields_to_json( lt_result_field ).
+          CATCH cx_root INTO DATA(lx_serialization).
+            RAISE EXCEPTION TYPE zcx_milo_validation
+              EXPORTING
+                textid   = zcx_milo_validation=>result_serialization_failed
+                previous = lx_serialization.
+        ENDTRY.
 
       CATCH zcx_milo_validation INTO DATA(lx_validation).
-        rs_result-status = 'BLOCKED'.
         rs_result-object_name = to_upper( iv_obj_name ).
         rs_result-error_code = get_validation_error_code( lx_validation ).
-        rs_result-error_text = lx_validation->get_text( ).
+        IF zcl_milo_error_mapper=>is_technical_error_code(
+             rs_result-error_code ) = abap_true.
+          rs_result-status = 'ERROR'.
+          rs_result-error_text =
+            zcl_milo_error_mapper=>get_safe_technical_text(
+              rs_result-error_code ).
+        ELSE.
+          rs_result-status = 'BLOCKED'.
+          rs_result-error_text = lx_validation->get_text( ).
+        ENDIF.
 
-      CATCH cx_root INTO DATA(lx_error).
+      CATCH cx_root.
         rs_result-status = 'ERROR'.
         rs_result-object_name = to_upper( iv_obj_name ).
-        rs_result-error_code = 'SYSTEM_ERROR'.
-        rs_result-error_text = lx_error->get_text( ).
+        rs_result-error_code = 'INTERNAL_ERROR'.
+        rs_result-error_text =
+          zcl_milo_error_mapper=>get_safe_technical_text(
+            rs_result-error_code ).
     ENDTRY.
 
   ENDMETHOD.
@@ -938,7 +997,9 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
            ev_status,
            ev_max_rows,
            ev_truncated,
-           ev_rows_json.
+           ev_rows_json,
+           ev_error_code,
+           ev_error_text.
 
     IF iv_page < 1.
       RAISE EXCEPTION TYPE zcx_milo_validation
@@ -963,7 +1024,9 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
         ev_status           = ev_status
         ev_max_rows         = ev_max_rows
         ev_truncated        = ev_truncated
-        ev_rows_json        = ev_rows_json ).
+        ev_rows_json        = ev_rows_json
+        ev_error_code       = ev_error_code
+        ev_error_text       = ev_error_text ).
 
   ENDMETHOD.
 
@@ -971,7 +1034,6 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
   METHOD run_query_result.
 
     DATA lv_page TYPE i.
-
 
     CLEAR rs_result.
 
@@ -988,7 +1050,9 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
             ev_status      = rs_result-status
             ev_max_rows    = rs_result-max_rows
             ev_truncated   = rs_result-truncated
-            ev_rows_json   = rs_result-rows_json ).
+            ev_rows_json   = rs_result-rows_json
+            ev_error_code  = rs_result-error_code
+            ev_error_text  = rs_result-error_text ).
 
         rs_result-total_rows = rs_result-row_count.
         lv_page = iv_page.
@@ -1007,32 +1071,31 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
         ENDIF.
 
         IF rs_result-status <> 'SUCCESS'.
-
-          IF rs_result-status = 'ERROR'.
-            rs_result-error_code = 'SYSTEM_ERROR'.
-            rs_result-error_text = rs_result-rows_json.
-            CLEAR rs_result-rows_json.
-          ENDIF.
-
+          CLEAR rs_result-rows_json.
           RETURN.
         ENDIF.
 
-
-        DATA(lt_query_column) = build_result_columns(
-          iv_profile_id = iv_profile_id
-          iv_sql        = iv_sql ).
-
-        rs_result-columns_json = zcl_milo_serializer=>result_columns_to_json( lt_query_column ).
-
       CATCH zcx_milo_validation INTO DATA(lx_validation).
-        rs_result-status = 'BLOCKED'.
         rs_result-error_code = get_validation_error_code( lx_validation ).
-        rs_result-error_text = lx_validation->get_text( ).
+        IF zcl_milo_error_mapper=>is_technical_error_code(
+             rs_result-error_code ) = abap_true.
+          rs_result-status = 'ERROR'.
+          rs_result-error_text =
+            zcl_milo_error_mapper=>get_safe_technical_text(
+              rs_result-error_code ).
+        ELSE.
+          rs_result-status = 'BLOCKED'.
+          rs_result-error_text = lx_validation->get_text( ).
+        ENDIF.
 
       CATCH cx_root INTO DATA(lx_error).
         rs_result-status = 'ERROR'.
-        rs_result-error_code = 'SYSTEM_ERROR'.
-        rs_result-error_text = lx_error->get_text( ).
+        rs_result-error_code =
+          zcl_milo_error_mapper=>get_technical_error_code( lx_error ).
+        rs_result-error_text =
+          zcl_milo_error_mapper=>get_safe_technical_text(
+            rs_result-error_code ).
+        CLEAR rs_result-rows_json.
     ENDTRY.
 
   ENDMETHOD.
@@ -1048,7 +1111,9 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
            ev_status,
            ev_max_rows,
            ev_truncated,
-           ev_rows_json.
+           ev_rows_json,
+           ev_error_code,
+           ev_error_text.
 
     IF iv_page < 1.
       RAISE EXCEPTION TYPE zcx_milo_validation
@@ -1073,7 +1138,9 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
         ev_status           = ev_status
         ev_max_rows         = ev_max_rows
         ev_truncated        = ev_truncated
-        ev_rows_json        = ev_rows_json ).
+        ev_rows_json        = ev_rows_json
+        ev_error_code       = ev_error_code
+        ev_error_text       = ev_error_text ).
 
   ENDMETHOD.
 
@@ -1101,7 +1168,9 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
             ev_status        = rs_result-status
             ev_max_rows      = rs_result-max_rows
             ev_truncated     = rs_result-truncated
-            ev_rows_json     = rs_result-rows_json ).
+            ev_rows_json     = rs_result-rows_json
+            ev_error_code    = rs_result-error_code
+            ev_error_text    = rs_result-error_text ).
 
         rs_result-total_rows = rs_result-row_count.
         rs_result-page = lv_page.
@@ -1113,19 +1182,36 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           ENDIF.
         ENDIF.
 
+        IF rs_result-status <> 'SUCCESS'.
+          CLEAR rs_result-rows_json.
+          RETURN.
+        ENDIF.
+
         rs_result-columns_json = get_columns_json(
           iv_profile_id = iv_profile_id
           iv_obj_name   = rs_result-object_name ).
 
       CATCH zcx_milo_validation INTO DATA(lx_validation).
-        rs_result-status = 'BLOCKED'.
         rs_result-error_code = get_validation_error_code( lx_validation ).
-        rs_result-error_text = lx_validation->get_text( ).
+        IF zcl_milo_error_mapper=>is_technical_error_code(
+             rs_result-error_code ) = abap_true.
+          rs_result-status = 'ERROR'.
+          rs_result-error_text =
+            zcl_milo_error_mapper=>get_safe_technical_text(
+              rs_result-error_code ).
+        ELSE.
+          rs_result-status = 'BLOCKED'.
+          rs_result-error_text = lx_validation->get_text( ).
+        ENDIF.
 
       CATCH cx_root INTO DATA(lx_error).
         rs_result-status = 'ERROR'.
-        rs_result-error_code = 'SYSTEM_ERROR'.
-        rs_result-error_text = lx_error->get_text( ).
+        rs_result-error_code =
+          zcl_milo_error_mapper=>get_technical_error_code( lx_error ).
+        rs_result-error_text =
+          zcl_milo_error_mapper=>get_safe_technical_text(
+            rs_result-error_code ).
+        CLEAR rs_result-rows_json.
     ENDTRY.
 
   ENDMETHOD.

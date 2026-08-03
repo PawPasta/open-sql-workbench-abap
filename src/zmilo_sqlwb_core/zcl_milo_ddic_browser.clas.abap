@@ -308,13 +308,20 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
       ENDIF.
     ENDLOOP.
 
-    IF lv_columns IS INITIAL.
-      ev_rows_json = zcl_milo_serializer=>table_to_json( lr_table ).
-    ELSE.
-      ev_rows_json = zcl_milo_serializer=>table_to_json_selected(
-        ir_data    = lr_table
-        iv_columns = lv_columns ).
-    ENDIF.
+    TRY.
+        IF lv_columns IS INITIAL.
+          ev_rows_json = zcl_milo_serializer=>table_to_json( lr_table ).
+        ELSE.
+          ev_rows_json = zcl_milo_serializer=>table_to_json_selected(
+            ir_data    = lr_table
+            iv_columns = lv_columns ).
+        ENDIF.
+      CATCH cx_root INTO DATA(lx_serialization).
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid   = zcx_milo_validation=>result_serialization_failed
+            previous = lx_serialization.
+    ENDTRY.
 
   ENDMETHOD.
 

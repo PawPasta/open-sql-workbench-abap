@@ -36,7 +36,6 @@ CLASS zcl_milo_sql_parser DEFINITION
 
     TYPES tt_select_field TYPE STANDARD TABLE OF ty_select_field WITH EMPTY KEY.
 
-    "
     TYPES:
       BEGIN OF ty_query_parts,
         table_name TYPE zmilo_obj_name,
@@ -99,10 +98,38 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
 
   METHOD normalize_order_sql.
 
+    DATA lt_order_item TYPE STANDARD TABLE OF string WITH EMPTY KEY.
+    DATA lv_order_item TYPE string.
+    DATA lv_order_key  TYPE string.
+    DATA lv_direction  TYPE string.
+
     rv_order = to_upper( condense( iv_order ) ).
 
-    REPLACE ALL OCCURRENCES OF ' ASC' IN rv_order WITH ' ASCENDING'.
-    REPLACE ALL OCCURRENCES OF ' DESC' IN rv_order WITH ' DESCENDING'.
+    SPLIT rv_order AT ',' INTO TABLE lt_order_item.
+    CLEAR rv_order.
+
+    LOOP AT lt_order_item INTO lv_order_item.
+      lv_order_item = condense( lv_order_item ).
+      CLEAR: lv_order_key, lv_direction.
+
+      FIND PCRE '^(.+)\s+(ASC|DESC)$'
+        IN lv_order_item
+        SUBMATCHES lv_order_key lv_direction.
+
+      IF sy-subrc = 0.
+        IF lv_direction = 'ASC'.
+          lv_order_item = lv_order_key && ` ASCENDING`.
+        ELSE.
+          lv_order_item = lv_order_key && ` DESCENDING`.
+        ENDIF.
+      ENDIF.
+
+      IF rv_order IS INITIAL.
+        rv_order = lv_order_item.
+      ELSE.
+        rv_order = rv_order && `,` && lv_order_item.
+      ENDIF.
+    ENDLOOP.
 
   ENDMETHOD.
 
@@ -124,7 +151,6 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
 
 
     lv_sql = iv_sql.
-
 
     REPLACE ALL OCCURRENCES OF cl_abap_char_utilities=>cr_lf IN lv_sql WITH space.
     REPLACE ALL OCCURRENCES OF cl_abap_char_utilities=>newline IN lv_sql WITH space.
@@ -294,9 +320,11 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
           mv_clause_name = 'ORDER BY'.
     ENDIF.
 
+
     FIND PCRE '^SELECT[[:space:]]+(.+?)[[:space:]]+FROM[[:space:]]+(.+?)([[:space:]]+WHERE[[:space:]]+|[[:space:]]+GROUP[[:space:]]+BY[[:space:]]+|[[:space:]]+HAVING[[:space:]]+|[[:space:]]+ORDER[[:space:]]+BY[[:space:]]+|$)'
       IN lv_sql
       SUBMATCHES lv_cols lv_from.
+
 
     IF sy-subrc <> 0 OR lv_cols IS INITIAL OR lv_from IS INITIAL.
       RAISE EXCEPTION TYPE zcx_milo_validation
@@ -304,10 +332,12 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
           textid = zcx_milo_validation=>parse_failed.
     ENDIF.
 
+
     rs_parts-columns    = condense( lv_cols ).
     rs_parts-from_sql   = condense( lv_from ).
 
     REPLACE ALL OCCURRENCES OF ' LEFT JOIN ' IN rs_parts-from_sql WITH ' LEFT OUTER JOIN '.
+
 
     IF rs_parts-from_sql CS ' JOIN '.
 
@@ -342,7 +372,6 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
       iv_columns   = rs_parts-columns
       iv_join_mode = rs_parts-is_join ).
 
-
     FIND PCRE '[[:space:]]+WHERE[[:space:]]+(.+?)([[:space:]]+GROUP[[:space:]]+BY[[:space:]]+|[[:space:]]+HAVING[[:space:]]+|[[:space:]]+ORDER[[:space:]]+BY[[:space:]]+|$)'
       IN lv_sql
       SUBMATCHES lv_where.
@@ -350,7 +379,6 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
     IF sy-subrc = 0.
       rs_parts-where_sql = condense( lv_where ).
     ENDIF.
-
 
     FIND PCRE '[[:space:]]+GROUP[[:space:]]+BY[[:space:]]+(.+?)([[:space:]]+HAVING[[:space:]]+|[[:space:]]+ORDER[[:space:]]+BY[[:space:]]+|$)'
       IN lv_sql
@@ -360,7 +388,6 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
       rs_parts-group_sql = condense( lv_group ).
     ENDIF.
 
-
     FIND PCRE '[[:space:]]+HAVING[[:space:]]+(.+?)([[:space:]]+ORDER[[:space:]]+BY[[:space:]]+|$)'
       IN lv_sql
       SUBMATCHES lv_having.
@@ -368,7 +395,6 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
     IF sy-subrc = 0.
       rs_parts-having_sql = normalize_count_distinct_sql( lv_having ).
     ENDIF.
-
 
     FIND PCRE '[[:space:]]+ORDER[[:space:]]+BY[[:space:]]+(.+)$'
       IN lv_sql
@@ -416,7 +442,6 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
         EXPORTING
           textid = zcx_milo_validation=>parse_failed.
     ENDIF.
-
 
     cs_parts-table_name = lv_left_object.
 
@@ -496,7 +521,6 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
         object_name = lv_right_object
         alias       = lv_right_alias ) TO cs_parts-sources.
 
-
       APPEND VALUE ty_join(
         join_type    = COND string(
                          WHEN lv_join_type = 'INNER' THEN 'INNER'
@@ -505,7 +529,6 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
         right_alias  = lv_right_alias
         right_object = lv_right_object
         on_sql       = condense( lv_on_sql ) ) TO cs_parts-joins.
-
 
       IF lv_match_len >= strlen( lv_rest ).
         CLEAR lv_rest.
@@ -792,15 +815,13 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
   METHOD normalize_count_distinct_sql.
 
     rv_sql = condense( iv_sql ).
-
-    REPLACE ALL OCCURRENCES OF 'COUNT(' IN rv_sql WITH 'COUNT( '.
-    REPLACE ALL OCCURRENCES OF 'SUM(' IN rv_sql WITH 'SUM( '.
-    REPLACE ALL OCCURRENCES OF 'AVG(' IN rv_sql WITH 'AVG( '.
-    REPLACE ALL OCCURRENCES OF 'MIN(' IN rv_sql WITH 'MIN( '.
-    REPLACE ALL OCCURRENCES OF 'MAX(' IN rv_sql WITH 'MAX( '.
-    REPLACE ALL OCCURRENCES OF ')' IN rv_sql WITH ' )'.
-
-    rv_sql = condense( rv_sql ).
+    REPLACE ALL OCCURRENCES OF ` )` IN rv_sql WITH `)`.
+    REPLACE ALL OCCURRENCES OF `COUNT(` IN rv_sql WITH `COUNT( `.
+    REPLACE ALL OCCURRENCES OF `SUM(` IN rv_sql WITH `SUM( `.
+    REPLACE ALL OCCURRENCES OF `AVG(` IN rv_sql WITH `AVG( `.
+    REPLACE ALL OCCURRENCES OF `MIN(` IN rv_sql WITH `MIN( `.
+    REPLACE ALL OCCURRENCES OF `MAX(` IN rv_sql WITH `MAX( `.
+    REPLACE ALL OCCURRENCES OF `)` IN rv_sql WITH ` )`.
 
   ENDMETHOD.
 ENDCLASS.

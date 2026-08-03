@@ -19,6 +19,8 @@ CLASS zcl_milo_executor DEFINITION
         ev_max_rows         TYPE i
         ev_truncated        TYPE abap_bool
         ev_rows_json        TYPE string
+        ev_error_code       TYPE zmilo_error_code
+        ev_error_text       TYPE string
       RAISING
         zcx_milo_validation.
 
@@ -37,6 +39,8 @@ CLASS zcl_milo_executor DEFINITION
         ev_max_rows         TYPE i
         ev_truncated        TYPE abap_bool
         ev_rows_json        TYPE string
+        ev_error_code       TYPE zmilo_error_code
+        ev_error_text       TYPE string
       RAISING
         zcx_milo_validation.
 
@@ -110,6 +114,15 @@ CLASS zcl_milo_executor DEFINITION
         iv_mask_value   TYPE zmilo_mask_value
       RETURNING
         VALUE(rv_value) TYPE string.
+
+    CLASS-METHODS serialize_result
+      IMPORTING
+        ir_data        TYPE REF TO data
+        iv_columns     TYPE string
+      RETURNING
+        VALUE(rv_json) TYPE string
+      RAISING
+        zcx_milo_validation.
 ENDCLASS.
 
 
@@ -187,8 +200,10 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
     DATA lr_table TYPE REF TO data.
     DATA lv_page TYPE i.
     DATA lv_offset TYPE i.
+    DATA lv_offset_8 TYPE int8.
     DATA lv_from TYPE string.
     DATA lv_select TYPE string.
+    DATA lv_having_sql TYPE string.
     DATA lv_json_columns TYPE string.
     DATA lv_component TYPE string.
     DATA lv_select_part TYPE string.
@@ -226,7 +241,14 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
           mv_value_1 = CONV string( lv_page ).
     ENDIF.
 
-    lv_offset = ( lv_page - 1 ) * ev_max_rows.
+    lv_offset_8 =
+      ( CONV int8( lv_page ) - 1 ) * CONV int8( ev_max_rows ).
+    IF lv_offset_8 > 2147483647.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid = zcx_milo_validation=>paging_offset_overflow.
+    ENDIF.
+    lv_offset = CONV i( lv_offset_8 ).
 
     IF is_parts-is_join = abap_true.
       lv_from = is_parts-from_sql.
@@ -259,9 +281,8 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
 
           IF ls_field-agg_func = 'COUNT'.
             lo_field_type = cl_abap_elemdescr=>get_i( ).
-          ELSEIF ls_field-agg_func = 'AVG'
-             OR ls_field-agg_func = 'SUM'.
-            lo_field_type = cl_abap_elemdescr=>get_decfloat34( ).
+          ELSEIF ls_field-agg_func = 'AVG'.
+            lo_field_type = cl_abap_elemdescr=>get_f( ).
           ELSEIF is_parts-is_join = abap_true.
             lo_field_type = get_join_field_type(
               is_parts        = is_parts
@@ -307,6 +328,15 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
 
     ENDLOOP.
 
+    "Dynamic Open SQL on older releases requires blanks inside aggregate
+    "parentheses. Normalize again at the execution boundary so SELECT and
+    "HAVING use the same syntax regardless of how the parser was called.
+    lv_select =
+      zcl_milo_sql_parser=>normalize_count_distinct_sql( lv_select ).
+    lv_having_sql =
+      zcl_milo_sql_parser=>normalize_count_distinct_sql(
+        is_parts-having_sql ).
+
     IF lv_select IS INITIAL OR lt_components IS INITIAL.
       RAISE EXCEPTION TYPE zcx_milo_validation
         EXPORTING
@@ -346,7 +376,7 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
       SELECT (lv_select)
         FROM (lv_from)
         GROUP BY (is_parts-group_sql)
-        HAVING (is_parts-having_sql)
+        HAVING (lv_having_sql)
         INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
         UP TO @ev_max_rows ROWS.
 
@@ -358,7 +388,7 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
         FROM (lv_from)
         WHERE (is_parts-where_sql)
         GROUP BY (is_parts-group_sql)
-        HAVING (is_parts-having_sql)
+        HAVING (lv_having_sql)
         INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
         UP TO @ev_max_rows ROWS.
 
@@ -394,7 +424,7 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
       SELECT (lv_select)
         FROM (lv_from)
         GROUP BY (is_parts-group_sql)
-        HAVING (is_parts-having_sql)
+        HAVING (lv_having_sql)
         ORDER BY (is_parts-order_sql)
         INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
         UP TO @ev_max_rows ROWS.
@@ -406,7 +436,7 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
       SELECT (lv_select)
         FROM (lv_from)
         GROUP BY (is_parts-group_sql)
-        HAVING (is_parts-having_sql)
+        HAVING (lv_having_sql)
         ORDER BY (is_parts-order_sql)
         INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
         UP TO @ev_max_rows ROWS
@@ -430,7 +460,7 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
           FROM (lv_from)
           WHERE (is_parts-where_sql)
           GROUP BY (is_parts-group_sql)
-          HAVING (is_parts-having_sql)
+          HAVING (lv_having_sql)
           ORDER BY (is_parts-order_sql)
           INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
           UP TO @ev_max_rows ROWS.
@@ -456,7 +486,7 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
           FROM (lv_from)
           WHERE (is_parts-where_sql)
           GROUP BY (is_parts-group_sql)
-          HAVING (is_parts-having_sql)
+          HAVING (lv_having_sql)
           ORDER BY (is_parts-order_sql)
           INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
           UP TO @ev_max_rows ROWS
@@ -470,7 +500,7 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
     ev_row_count = ev_returned_rows.
     ev_truncated = xsdbool( ev_returned_rows >= ev_max_rows ).
 
-    ev_rows_json = zcl_milo_serializer=>table_to_json_selected(
+    ev_rows_json = serialize_result(
       ir_data    = lr_table
       iv_columns = lv_json_columns ).
 
@@ -482,6 +512,7 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
     DATA lr_table TYPE REF TO data.
     DATA lv_page TYPE i.
     DATA lv_offset TYPE i.
+    DATA lv_offset_8 TYPE int8.
     DATA lv_from TYPE string.
     DATA lv_select TYPE string.
     DATA lv_json_columns TYPE string.
@@ -520,7 +551,14 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
           mv_value_1 = CONV string( lv_page ).
     ENDIF.
 
-    lv_offset = ( lv_page - 1 ) * ev_max_rows.
+    lv_offset_8 =
+      ( CONV int8( lv_page ) - 1 ) * CONV int8( ev_max_rows ).
+    IF lv_offset_8 > 2147483647.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid = zcx_milo_validation=>paging_offset_overflow.
+    ENDIF.
+    lv_offset = CONV i( lv_offset_8 ).
     lv_from = is_parts-from_sql.
 
     LOOP AT is_parts-fields INTO DATA(ls_field).
@@ -636,7 +674,7 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
       iv_mask_profile_id = iv_mask_profile_id
       ir_data            = lr_table ).
 
-    ev_rows_json = zcl_milo_serializer=>table_to_json_selected(
+    ev_rows_json = serialize_result(
       ir_data    = lr_table
       iv_columns = lv_json_columns ).
 
@@ -675,7 +713,9 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
         ev_status           = ev_status
         ev_max_rows         = ev_max_rows
         ev_truncated        = ev_truncated
-        ev_rows_json        = ev_rows_json ).
+        ev_rows_json        = ev_rows_json
+        ev_error_code       = ev_error_code
+        ev_error_text       = ev_error_text ).
 
   ENDMETHOD.
 
@@ -689,8 +729,10 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
     DATA lv_dur   TYPE i.
     DATA lv_page   TYPE i.
     DATA lv_offset TYPE i.
+    DATA lv_offset_8 TYPE int8.
     DATA lv_select_columns TYPE string.
     DATA lv_field_count TYPE i.
+    DATA lv_log_id TYPE sysuuid_x16.
 
     GET TIME STAMP FIELD lv_start.
 
@@ -704,7 +746,9 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
                ev_status,
                ev_max_rows,
                ev_truncated,
-               ev_rows_json.
+               ev_rows_json,
+               ev_error_code,
+               ev_error_text.
 
         zcl_milo_validator=>validate_select_sql(
           EXPORTING
@@ -740,7 +784,7 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
           DATA lv_group_result_bytes TYPE i.
           lv_group_result_bytes = strlen( ev_rows_json ).
 
-          zcl_milo_logger=>log_execution(
+          lv_log_id = zcl_milo_logger=>log_execution(
             iv_sql_text      = iv_sql
             iv_status        = 'SUCCESS'
             iv_exec_mode     = 'SYNC'
@@ -751,6 +795,15 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
             iv_truncated     = ev_truncated
             iv_duration_ms   = lv_dur
             iv_result_bytes  = lv_group_result_bytes ).
+
+          IF lv_log_id IS INITIAL.
+            ev_status = 'ERROR'.
+            ev_error_code = 'LOG_WRITE_FAILED'.
+            ev_error_text =
+              zcl_milo_error_mapper=>get_safe_technical_text(
+                ev_error_code ).
+            CLEAR ev_rows_json.
+          ENDIF.
 
           RETURN.
 
@@ -782,7 +835,7 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
           DATA lv_join_result_bytes TYPE i.
           lv_join_result_bytes = strlen( ev_rows_json ).
 
-          zcl_milo_logger=>log_execution(
+          lv_log_id = zcl_milo_logger=>log_execution(
             iv_sql_text      = iv_sql
             iv_status        = 'SUCCESS'
             iv_exec_mode     = 'SYNC'
@@ -793,6 +846,15 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
             iv_truncated     = ev_truncated
             iv_duration_ms   = lv_dur
             iv_result_bytes  = lv_join_result_bytes ).
+
+          IF lv_log_id IS INITIAL.
+            ev_status = 'ERROR'.
+            ev_error_code = 'LOG_WRITE_FAILED'.
+            ev_error_text =
+              zcl_milo_error_mapper=>get_safe_technical_text(
+                ev_error_code ).
+            CLEAR ev_rows_json.
+          ENDIF.
 
           RETURN.
 
@@ -814,7 +876,14 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
               mv_value_1 = CONV string( lv_page ).
         ENDIF.
 
-        lv_offset = ( lv_page - 1 ) * ev_max_rows.
+        lv_offset_8 =
+          ( CONV int8( lv_page ) - 1 ) * CONV int8( ev_max_rows ).
+        IF lv_offset_8 > 2147483647.
+          RAISE EXCEPTION TYPE zcx_milo_validation
+            EXPORTING
+              textid = zcx_milo_validation=>paging_offset_overflow.
+        ENDIF.
+        lv_offset = CONV i( lv_offset_8 ).
 
         IF ls_parts-where_sql IS INITIAL.
 
@@ -993,13 +1062,9 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
 
         ENDIF.
 
-        IF ls_parts-columns = '*'.
-          ev_rows_json = zcl_milo_serializer=>table_to_json( lr_table ).
-        ELSE.
-          ev_rows_json = zcl_milo_serializer=>table_to_json_selected(
-            ir_data    = lr_table
-            iv_columns = ls_parts-columns ).
-        ENDIF.
+        ev_rows_json = serialize_result(
+          ir_data    = lr_table
+          iv_columns = ls_parts-columns ).
 
         ev_status = 'SUCCESS'.
         GET TIME STAMP FIELD lv_end.
@@ -1011,7 +1076,7 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
 
         lv_result_bytes = strlen( ev_rows_json ).
 
-        zcl_milo_logger=>log_execution(
+        lv_log_id = zcl_milo_logger=>log_execution(
           iv_sql_text      = iv_sql
           iv_status        = 'SUCCESS'
           iv_exec_mode     = 'SYNC'
@@ -1023,6 +1088,15 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
           iv_duration_ms   = lv_dur
           iv_result_bytes  = lv_result_bytes ).
 
+        IF lv_log_id IS INITIAL.
+          ev_status = 'ERROR'.
+          ev_error_code = 'LOG_WRITE_FAILED'.
+          ev_error_text =
+            zcl_milo_error_mapper=>get_safe_technical_text(
+              ev_error_code ).
+          CLEAR ev_rows_json.
+        ENDIF.
+
       CATCH zcx_milo_validation INTO DATA(lx_validation).
 
         GET TIME STAMP FIELD lv_end.
@@ -1033,6 +1107,34 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
         lv_dur = cl_abap_tstmp=>subtract(
           tstmp1 = lv_end
           tstmp2 = lv_start ) * 1000.
+
+        IF zcl_milo_error_mapper=>is_technical_error_code(
+             lv_validation_error_code ) = abap_true.
+
+          ev_status = 'ERROR'.
+          ev_error_code = lv_validation_error_code.
+          ev_error_text =
+            zcl_milo_error_mapper=>get_safe_technical_text(
+              lv_validation_error_code ).
+          CLEAR ev_rows_json.
+
+          zcl_milo_logger=>log_execution(
+            iv_sql_text      = iv_sql
+            iv_status        = 'ERROR'
+            iv_exec_mode     = 'SYNC'
+            iv_source_obj    = ev_object_name
+            iv_row_count     = ev_row_count
+            iv_row_limit_req = ev_max_rows
+            iv_row_limit_eff = ev_max_rows
+            iv_truncated     = ev_truncated
+            iv_duration_ms   = lv_dur
+            iv_result_bytes  = 0
+            iv_error_code    = ev_error_code
+            iv_error_text    = lx_validation->get_text( ) ).
+
+          RETURN.
+
+        ENDIF.
 
         ev_status = 'BLOCKED'.
 
@@ -1070,7 +1172,11 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
           tstmp2 = lv_start ) * 1000.
 
         ev_status = 'ERROR'.
-        ev_rows_json = lx_error->get_text( ).
+        CLEAR ev_rows_json.
+        ev_error_code =
+          zcl_milo_error_mapper=>get_technical_error_code( lx_error ).
+        ev_error_text =
+          zcl_milo_error_mapper=>get_safe_technical_text( ev_error_code ).
 
         zcl_milo_logger=>log_execution(
           iv_sql_text      = iv_sql
@@ -1083,6 +1189,7 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
           iv_truncated     = ev_truncated
           iv_duration_ms   = lv_dur
           iv_result_bytes  = 0
+          iv_error_code    = ev_error_code
           iv_error_text    = lx_error->get_text( ) ).
 
     ENDTRY.
@@ -1194,6 +1301,26 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
       WHEN OTHERS.
         rv_value = iv_value.
     ENDCASE.
+
+  ENDMETHOD.
+
+
+  METHOD serialize_result.
+
+    TRY.
+        IF iv_columns = '*'.
+          rv_json = zcl_milo_serializer=>table_to_json( ir_data ).
+        ELSE.
+          rv_json = zcl_milo_serializer=>table_to_json_selected(
+            ir_data    = ir_data
+            iv_columns = iv_columns ).
+        ENDIF.
+      CATCH cx_root INTO DATA(lx_serialization).
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid   = zcx_milo_validation=>result_serialization_failed
+            previous = lx_serialization.
+    ENDTRY.
 
   ENDMETHOD.
 ENDCLASS.

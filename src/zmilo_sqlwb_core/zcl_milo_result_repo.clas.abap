@@ -28,9 +28,11 @@ CLASS zcl_milo_result_repo DEFINITION
 
     CLASS-METHODS save_result
       IMPORTING
-        is_head   TYPE zmilo_rhead
-        it_column TYPE tt_column
-        it_page   TYPE tt_page.
+        is_head         TYPE zmilo_rhead
+        it_column       TYPE tt_column
+        it_page         TYPE tt_page
+      RETURNING
+        VALUE(rv_saved) TYPE abap_bool.
 
     CLASS-METHODS build_page_chunks
       IMPORTING
@@ -292,6 +294,8 @@ CLASS ZCL_MILO_RESULT_REPO IMPLEMENTATION.
     DATA lt_column TYPE tt_column.
     DATA lt_page   TYPE tt_page.
 
+    CLEAR rv_saved.
+
     ls_head   = is_head.
     lt_column = it_column.
     lt_page   = it_page.
@@ -308,36 +312,55 @@ CLASS ZCL_MILO_RESULT_REPO IMPLEMENTATION.
       GET TIME STAMP FIELD ls_head-created_at.
     ENDIF.
 
-    DELETE FROM zmilo_rpage
-      WHERE result_id = @ls_head-result_id.
+    TRY.
+        DELETE FROM zmilo_rpage
+          WHERE result_id = @ls_head-result_id.
 
-    DELETE FROM zmilo_rcol
-      WHERE result_id = @ls_head-result_id.
+        DELETE FROM zmilo_rcol
+          WHERE result_id = @ls_head-result_id.
 
-    DELETE FROM zmilo_rhead
-      WHERE result_id = @ls_head-result_id.
+        DELETE FROM zmilo_rhead
+          WHERE result_id = @ls_head-result_id.
 
-    LOOP AT lt_column ASSIGNING FIELD-SYMBOL(<ls_column>).
-      <ls_column>-mandt = sy-mandt.
-      <ls_column>-result_id = ls_head-result_id.
-    ENDLOOP.
+        LOOP AT lt_column ASSIGNING FIELD-SYMBOL(<ls_column>).
+          <ls_column>-mandt = sy-mandt.
+          <ls_column>-result_id = ls_head-result_id.
+        ENDLOOP.
 
-    LOOP AT lt_page ASSIGNING FIELD-SYMBOL(<ls_page>).
-      <ls_page>-mandt = sy-mandt.
-      <ls_page>-result_id = ls_head-result_id.
-    ENDLOOP.
+        LOOP AT lt_page ASSIGNING FIELD-SYMBOL(<ls_page>).
+          <ls_page>-mandt = sy-mandt.
+          <ls_page>-result_id = ls_head-result_id.
+        ENDLOOP.
 
-    INSERT zmilo_rhead FROM @ls_head.
+        INSERT zmilo_rhead FROM @ls_head.
+        IF sy-subrc <> 0.
+          ROLLBACK WORK.
+          RETURN.
+        ENDIF.
 
-    IF lt_column IS NOT INITIAL.
-      INSERT zmilo_rcol FROM TABLE @lt_column.
-    ENDIF.
+        IF lt_column IS NOT INITIAL.
+          INSERT zmilo_rcol FROM TABLE @lt_column.
+          IF sy-subrc <> 0.
+            ROLLBACK WORK.
+            RETURN.
+          ENDIF.
+        ENDIF.
 
-    IF lt_page IS NOT INITIAL.
-      INSERT zmilo_rpage FROM TABLE @lt_page.
-    ENDIF.
+        IF lt_page IS NOT INITIAL.
+          INSERT zmilo_rpage FROM TABLE @lt_page.
+          IF sy-subrc <> 0.
+            ROLLBACK WORK.
+            RETURN.
+          ENDIF.
+        ENDIF.
 
-    COMMIT WORK AND WAIT.
+        COMMIT WORK AND WAIT.
+        rv_saved = abap_true.
+
+      CATCH cx_sy_open_sql_db.
+        ROLLBACK WORK.
+        CLEAR rv_saved.
+    ENDTRY.
 
   ENDMETHOD.
 ENDCLASS.
