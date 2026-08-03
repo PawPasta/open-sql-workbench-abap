@@ -649,6 +649,9 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
     DATA lv_dir TYPE string.
     DATA lv_group_item TYPE string.
     DATA lv_allowed TYPE abap_bool.
+    DATA lv_invalid_dir TYPE string.
+    DATA lt_seen_key TYPE SORTED TABLE OF string
+      WITH UNIQUE KEY table_line.
 
     IF is_parts-order_sql IS INITIAL.
       RETURN.
@@ -659,6 +662,9 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
 
     LOOP AT lt_order INTO lv_order_item.
 
+      CLEAR: lv_order_key,
+             lv_dir,
+             lv_invalid_dir.
       lv_order_item = to_upper( condense( lv_order_item ) ).
 
       FIND PCRE '^([A-Z0-9_~]+)(?:\s+(ASC|DESC|ASCENDING|DESCENDING))?$'
@@ -666,9 +672,29 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
         SUBMATCHES lv_order_key lv_dir.
 
       IF sy-subrc <> 0 OR lv_order_key IS INITIAL.
+        FIND PCRE '^([A-Z0-9_~]+)\s+([A-Z0-9_]+)$'
+          IN lv_order_item
+          SUBMATCHES lv_order_key lv_invalid_dir.
+
+        IF sy-subrc = 0 AND lv_invalid_dir IS NOT INITIAL.
+          RAISE EXCEPTION TYPE zcx_milo_validation
+            EXPORTING
+              textid     = zcx_milo_validation=>order_direction_invalid
+              mv_value_1 = lv_invalid_dir.
+        ENDIF.
+
         RAISE EXCEPTION TYPE zcx_milo_validation
           EXPORTING
-            textid = zcx_milo_validation=>invalid_order_by.
+            textid     = zcx_milo_validation=>order_expression_not_supported
+            mv_value_1 = lv_order_item.
+      ENDIF.
+
+      INSERT lv_order_key INTO TABLE lt_seen_key.
+      IF sy-subrc <> 0.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid        = zcx_milo_validation=>order_field_duplicated
+            mv_field_name = CONV zmilo_field_name( lv_order_key ).
       ENDIF.
 
       CLEAR lv_allowed.
@@ -691,6 +717,17 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
       ENDIF.
 
       IF lv_allowed <> abap_true.
+        IF lv_order_key NS '~'
+           AND ( is_parts-is_join = abap_true
+                 OR zcl_milo_config=>is_field_exists(
+                      iv_obj_name   = is_parts-table_name
+                      iv_field_name = CONV zmilo_field_name( lv_order_key ) ) <> abap_true ).
+          RAISE EXCEPTION TYPE zcx_milo_validation
+            EXPORTING
+              textid     = zcx_milo_validation=>order_alias_not_found
+              mv_value_1 = lv_order_key.
+        ENDIF.
+
         RAISE EXCEPTION TYPE zcx_milo_validation
           EXPORTING
             textid        = zcx_milo_validation=>order_field_invalid
@@ -897,6 +934,10 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
     DATA lv_alias TYPE string.
     DATA lv_field TYPE string.
     DATA lv_dir TYPE string.
+    DATA lv_invalid_dir TYPE string.
+    DATA lv_order_key TYPE string.
+    DATA lt_seen_key TYPE SORTED TABLE OF string
+      WITH UNIQUE KEY table_line.
 
     IF is_parts-order_sql IS INITIAL.
       RETURN.
@@ -906,6 +947,11 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
 
     LOOP AT lt_order INTO lv_order_item.
 
+      CLEAR: lv_alias,
+             lv_field,
+             lv_dir,
+             lv_invalid_dir,
+             lv_order_key.
       lv_order_item = condense( lv_order_item ).
 
       FIND PCRE '^([A-Z0-9_]+)~([A-Z0-9_]+)(?:\s+(ASC|DESC|ASCENDING|DESCENDING))?$'
@@ -913,9 +959,30 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
         SUBMATCHES lv_alias lv_field lv_dir.
 
       IF sy-subrc <> 0 OR lv_alias IS INITIAL OR lv_field IS INITIAL.
+        FIND PCRE '^([A-Z0-9_]+~[A-Z0-9_]+)\s+([A-Z0-9_]+)$'
+          IN lv_order_item
+          SUBMATCHES lv_order_key lv_invalid_dir.
+
+        IF sy-subrc = 0 AND lv_invalid_dir IS NOT INITIAL.
+          RAISE EXCEPTION TYPE zcx_milo_validation
+            EXPORTING
+              textid     = zcx_milo_validation=>order_direction_invalid
+              mv_value_1 = lv_invalid_dir.
+        ENDIF.
+
         RAISE EXCEPTION TYPE zcx_milo_validation
           EXPORTING
-            textid = zcx_milo_validation=>invalid_order_by.
+            textid     = zcx_milo_validation=>order_expression_not_supported
+            mv_value_1 = lv_order_item.
+      ENDIF.
+
+      lv_order_key = lv_alias && '~' && lv_field.
+      INSERT lv_order_key INTO TABLE lt_seen_key.
+      IF sy-subrc <> 0.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid        = zcx_milo_validation=>order_field_duplicated
+            mv_field_name = CONV zmilo_field_name( lv_order_key ).
       ENDIF.
 
       validate_join_field(
@@ -1351,6 +1418,10 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
     DATA lv_field TYPE zmilo_field_name.
     DATA lv_dir   TYPE string.
     DATA lv_dir_part TYPE string.
+    DATA lv_invalid_dir TYPE string.
+    DATA lv_field_key TYPE string.
+    DATA lt_seen_field TYPE SORTED TABLE OF string
+      WITH UNIQUE KEY table_line.
 
     FIND PCRE '[[:space:]]ORDER[[:space:]]+BY[[:space:]]+(.+)$'
       IN iv_sql
@@ -1367,14 +1438,20 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
 
     lv_order = condense( lv_order ).
 
-    IF lv_order IS INITIAL
-       OR lv_order CS '('
+    IF lv_order IS INITIAL.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid = zcx_milo_validation=>invalid_order_by.
+    ENDIF.
+
+    IF lv_order CS '('
        OR lv_order CS ')'
        OR lv_order CS '~'
        OR lv_order CS '.'.
       RAISE EXCEPTION TYPE zcx_milo_validation
         EXPORTING
-          textid = zcx_milo_validation=>invalid_order_by.
+          textid     = zcx_milo_validation=>order_expression_not_supported
+          mv_value_1 = lv_order.
     ENDIF.
 
     SPLIT lv_order AT ',' INTO TABLE lt_order_item.
@@ -1383,27 +1460,51 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
 
       CLEAR: lv_field,
              lv_dir,
-             lv_dir_part.
+             lv_dir_part,
+             lv_invalid_dir,
+             lv_field_key.
 
       lv_order_item = to_upper( condense( lv_order_item ) ).
 
       IF lv_order_item IS INITIAL.
         RAISE EXCEPTION TYPE zcx_milo_validation
           EXPORTING
-            textid = zcx_milo_validation=>invalid_order_by.
+            textid     = zcx_milo_validation=>order_expression_not_supported
+            mv_value_1 = lv_order.
       ENDIF.
 
-      FIND PCRE '^([A-Z0-9_]+)([[:space:]]+(ASC|DESC))?$'
+      FIND PCRE '^([A-Z0-9_]+)([[:space:]]+(ASC|DESC|ASCENDING|DESCENDING))?$'
         IN lv_order_item
         SUBMATCHES lv_field lv_dir_part lv_dir.
 
       IF sy-subrc <> 0 OR lv_field IS INITIAL.
+        FIND PCRE '^([A-Z0-9_]+)[[:space:]]+([A-Z0-9_]+)$'
+          IN lv_order_item
+          SUBMATCHES lv_field lv_invalid_dir.
+
+        IF sy-subrc = 0 AND lv_invalid_dir IS NOT INITIAL.
+          RAISE EXCEPTION TYPE zcx_milo_validation
+            EXPORTING
+              textid     = zcx_milo_validation=>order_direction_invalid
+              mv_value_1 = lv_invalid_dir.
+        ENDIF.
+
         RAISE EXCEPTION TYPE zcx_milo_validation
           EXPORTING
-            textid = zcx_milo_validation=>invalid_order_by.
+            textid     = zcx_milo_validation=>order_expression_not_supported
+            mv_value_1 = lv_order_item.
       ENDIF.
 
       lv_field = to_upper( condense( lv_field ) ).
+
+      lv_field_key = lv_field.
+      INSERT lv_field_key INTO TABLE lt_seen_field.
+      IF sy-subrc <> 0.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid        = zcx_milo_validation=>order_field_duplicated
+            mv_field_name = lv_field.
+      ENDIF.
 
       IF zcl_milo_config=>is_field_exists(
            iv_obj_name   = iv_obj_name
