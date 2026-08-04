@@ -79,6 +79,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
     DATA ls_save_response TYPE ty_save_query_result.
     DATA lv_result_saved TYPE abap_bool.
     DATA lv_mapped_error_code TYPE zmilo_error_code.
+    DATA lv_search_error_text TYPE bapi_msg.
 
     FIELD-SYMBOLS <ls_parameter> TYPE /iwbep/s_mgw_name_value_pair.
 
@@ -672,10 +673,18 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
               <ls_table_response>-description = ls_table-ddtext.
             ENDLOOP.
 
-          CATCH zcx_milo_validation.
-            CLEAR lt_table_response.
-          CATCH cx_root.
-            CLEAR lt_table_response.
+          CATCH zcx_milo_validation INTO DATA(lx_search_validation).
+            lv_search_error_text = lx_search_validation->get_text( ).
+            mo_context->get_message_container( )->add_message_text_only(
+              iv_msg_type = 'E'
+              iv_msg_text = lv_search_error_text  ).
+            RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+              EXPORTING
+                message_container = mo_context->get_message_container( ).
+          CATCH cx_root INTO DATA(lx_search_error).
+            RAISE EXCEPTION TYPE /iwbep/cx_mgw_tech_exception
+              EXPORTING
+                previous = lx_search_error.
         ENDTRY.
 
         copy_data_to_ref(
