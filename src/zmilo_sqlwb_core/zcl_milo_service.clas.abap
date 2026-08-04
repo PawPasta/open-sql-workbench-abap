@@ -605,7 +605,8 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           mv_value_1 = CONV string( rs_role-wlist_profile_id ).
     ENDIF.
 
-    IF rs_role-mask_profile_id IS NOT INITIAL.
+    IF rs_role-mask_profile_id IS NOT INITIAL
+       AND rs_role-mask_profile_id <> 'MASK_NONE'.
       SELECT SINGLE mask_profile_id
         FROM zmilo_mask
         WHERE mask_profile_id = @rs_role-mask_profile_id
