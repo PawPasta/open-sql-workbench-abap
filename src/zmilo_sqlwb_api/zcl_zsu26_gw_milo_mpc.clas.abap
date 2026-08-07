@@ -55,6 +55,11 @@ public section.
         SEARCHTEXT type C length 40,
     end of TS_SEARCHTABLES .
   types:
+    begin of TS_DELETESAVEDQUERY,
+        QUERYID type C length 32,
+        PROFILEID type C length 30,
+    end of TS_DELETESAVEDQUERY .
+  types:
     begin of TS_UPDATESAVEDQUERY,
         DESCRIPTION type C length 255,
         VISIBILITY type C length 10,
@@ -433,6 +438,17 @@ lo_action->set_return_entity_type( 'SqlwbSaveQueryResult' ). "#EC NOTEXT
 lo_action->set_http_method( 'POST' ). "#EC NOTEXT
 * Set return type multiplicity
 lo_action->set_return_multiplicity( '1' ). "#EC NOTEXT
+***********************************************************************************************************************************
+* Parameters
+***********************************************************************************************************************************
+
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'QueryId'    iv_abap_fieldname = 'QUERYID' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 32 ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'ProfileId'    iv_abap_fieldname = 'PROFILEID' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
+lo_parameter->set_maxlength( iv_max_length = 30 ). "#EC NOTEXT
+lo_action->bind_input_structure( iv_structure_name  = 'ZCL_ZSU26_GW_MILO_MPC=>TS_DELETESAVEDQUERY' ). "#EC NOTEXT
 ***********************************************************************************************************************************
 *   ACTION - UpdateSavedQuery
 ***********************************************************************************************************************************
@@ -1580,7 +1596,7 @@ lo_entity_set->set_filter_required( abap_false ).
 *&---------------------------------------------------------------------*
 
 
-  CONSTANTS: lc_gen_date_time TYPE timestamp VALUE '20260723222203'.                  "#EC NOTEXT
+  CONSTANTS: lc_gen_date_time TYPE timestamp VALUE '20260806035210'.                  "#EC NOTEXT
   rv_last_modified = super->get_last_modified( ).
   IF rv_last_modified LT lc_gen_date_time.
     rv_last_modified = lc_gen_date_time.
