@@ -23,9 +23,7 @@ CLASS zcl_milo_service DEFINITION
         page_size     TYPE i,
         total_pages   TYPE i,
         truncated     TYPE abap_bool,
-        columns_json  TYPE string,
         rows_json     TYPE string,
-        csv           TYPE string,
         error_code    TYPE zmilo_error_code,
         error_text    TYPE string,
       END OF ty_run_result.
@@ -226,21 +224,13 @@ CLASS zcl_milo_service DEFINITION
       RETURNING
         VALUE(rs_role) TYPE zmilo_role
 
+
       RAISING
         zcx_milo_validation.
 
     CLASS-METHODS assert_user_has_pfcg_role
       IMPORTING
         is_role TYPE zmilo_role
-      RAISING
-        zcx_milo_validation.
-
-    CLASS-METHODS get_columns_json
-      IMPORTING
-        iv_profile_id  TYPE zmilo_profile_id
-        iv_obj_name    TYPE zmilo_obj_name
-      RETURNING
-        VALUE(rv_json) TYPE string
       RAISING
         zcx_milo_validation.
 
@@ -257,12 +247,14 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
 
     lv_required_role = to_upper( condense( is_role-pfcg_role ) ).
 
+
     IF lv_required_role IS INITIAL.
       RAISE EXCEPTION TYPE zcx_milo_validation
         EXPORTING
           textid        = zcx_milo_validation=>pfcg_role_not_configured
           mv_profile_id = is_role-profile_id.
     ENDIF.
+
 
     SELECT SINGLE agr_name
       FROM agr_define
@@ -278,12 +270,16 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
 
     SELECT SINGLE agr_name
       FROM agr_users
+
       WHERE uname    = @sy-uname
+
         AND agr_name = @lv_required_role
+
         AND from_dat <= @sy-datum
         AND to_dat   >= @sy-datum
       INTO @DATA(lv_pfcg_role)
       BYPASSING BUFFER.
+
 
     IF sy-subrc <> 0.
       RAISE EXCEPTION TYPE zcx_milo_validation
@@ -297,23 +293,58 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
 
   METHOD build_result_columns.
 
+    TYPES:
+      BEGIN OF ty_ddic_cache,
+        object_name TYPE zmilo_obj_name,
+        fields      TYPE tt_ddic_field,
+      END OF ty_ddic_cache.
+
+
     DATA ls_parts TYPE zcl_milo_sql_parser=>ty_query_parts.
+
 
     DATA lt_field TYPE tt_ddic_field.
 
     DATA lv_field_count TYPE i.
 
+
     DATA lv_column_position TYPE i.
+
 
     DATA lv_source_object TYPE zmilo_obj_name.
 
+
     DATA lv_output_field TYPE zmilo_field_name.
+
+    DATA lt_ddic_cache TYPE HASHED TABLE OF ty_ddic_cache
+      WITH UNIQUE KEY object_name.
+
+    FIELD-SYMBOLS <ls_ddic_cache> TYPE ty_ddic_cache.
 
     CLEAR rt_column.
 
     ls_parts = zcl_milo_sql_parser=>parse( iv_sql ).
 
+
     IF ls_parts-is_join = abap_true.
+
+      LOOP AT ls_parts-sources INTO DATA(ls_cache_source).
+        READ TABLE lt_ddic_cache TRANSPORTING NO FIELDS
+          WITH TABLE KEY object_name = ls_cache_source-object_name.
+
+        IF sy-subrc = 0.
+          CONTINUE.
+        ENDIF.
+
+        DATA(lt_source_field) = get_ddic_fields(
+          iv_profile_id = iv_profile_id
+          iv_obj_name   = ls_cache_source-object_name ).
+
+        INSERT VALUE ty_ddic_cache(
+          object_name = ls_cache_source-object_name
+          fields      = lt_source_field )
+          INTO TABLE lt_ddic_cache.
+      ENDLOOP.
 
       LOOP AT ls_parts-fields INTO DATA(ls_join_field).
 
@@ -344,11 +375,18 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
               ENDIF.
             ENDLOOP.
 
-            lt_field = get_ddic_fields(
-              iv_profile_id = iv_profile_id
-              iv_obj_name   = lv_source_object ).
+            READ TABLE lt_ddic_cache ASSIGNING <ls_ddic_cache>
+              WITH TABLE KEY object_name = lv_source_object.
 
-            READ TABLE lt_field INTO DATA(ls_join_agg_ddic_field)
+            IF sy-subrc <> 0.
+              RAISE EXCEPTION TYPE zcx_milo_validation
+                EXPORTING
+                  textid         = zcx_milo_validation=>ddic_metadata_not_found
+                  mv_object_name = lv_source_object.
+            ENDIF.
+
+            READ TABLE <ls_ddic_cache>-fields
+              INTO DATA(ls_join_agg_ddic_field)
               WITH KEY fieldname = ls_join_field-field_name.
 
             IF sy-subrc <> 0.
@@ -390,11 +428,17 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
               textid = zcx_milo_validation=>invalid_field.
         ENDIF.
 
-        lt_field = get_ddic_fields(
-          iv_profile_id = iv_profile_id
-          iv_obj_name   = lv_source_object ).
+        READ TABLE lt_ddic_cache ASSIGNING <ls_ddic_cache>
+          WITH TABLE KEY object_name = lv_source_object.
 
-        READ TABLE lt_field INTO DATA(ls_join_ddic_field)
+        IF sy-subrc <> 0.
+          RAISE EXCEPTION TYPE zcx_milo_validation
+            EXPORTING
+              textid         = zcx_milo_validation=>ddic_metadata_not_found
+              mv_object_name = lv_source_object.
+        ENDIF.
+
+        READ TABLE <ls_ddic_cache>-fields INTO DATA(ls_join_ddic_field)
           WITH KEY fieldname = ls_join_field-field_name.
 
         IF sy-subrc <> 0.
@@ -622,31 +666,6 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
     ENDIF.
 
     assert_user_has_pfcg_role( rs_role ).
-
-  ENDMETHOD.
-
-
-  METHOD get_columns_json.
-
-    DATA lt_field TYPE tt_ddic_field.
-
-    IF iv_obj_name IS INITIAL.
-      rv_json = '[]'.
-      RETURN.
-    ENDIF.
-
-    lt_field = get_ddic_fields(
-      iv_profile_id = iv_profile_id
-      iv_obj_name   = iv_obj_name ).
-
-    TRY.
-        rv_json = zcl_milo_serializer=>fields_to_json( lt_field ).
-      CATCH cx_root INTO DATA(lx_serialization).
-        RAISE EXCEPTION TYPE zcx_milo_validation
-          EXPORTING
-            textid   = zcx_milo_validation=>result_serialization_failed
-            previous = lx_serialization.
-    ENDTRY.
 
   ENDMETHOD.
 
@@ -968,15 +987,6 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
             ev_total_rows  = rs_result-total_rows
             ev_rows_json   = rs_result-rows_json ).
 
-        preview_table_csv(
-          EXPORTING
-            iv_profile_id  = iv_profile_id
-            iv_obj_name    = iv_obj_name
-            iv_row_limit   = iv_row_limit
-            iv_page        = iv_page
-          IMPORTING
-            ev_csv         = rs_result-csv ).
-
         rs_result-status = 'SUCCESS'.
         rs_result-returned_rows = rs_result-row_count.
         lv_page_size = iv_row_limit.
@@ -997,34 +1007,6 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           ENDIF.
         ENDIF.
         rs_result-truncated = xsdbool( rs_result-total_rows > rs_result-returned_rows ).
-        DATA(lt_field) = get_ddic_fields(
-          iv_profile_id = iv_profile_id
-          iv_obj_name   = rs_result-object_name ).
-
-        DATA(lt_result_field) = lt_field.
-
-        CLEAR lt_result_field.
-
-        DATA(lv_field_count) = 0.
-
-        LOOP AT lt_field INTO DATA(ls_star_field).
-          lv_field_count = lv_field_count + 1.
-          IF lv_field_count > zcl_milo_config=>c_max_select_fields.
-            EXIT.
-          ENDIF.
-          APPEND ls_star_field TO lt_result_field.
-        ENDLOOP.
-
-        TRY.
-            rs_result-columns_json =
-              zcl_milo_serializer=>fields_to_json( lt_result_field ).
-          CATCH cx_root INTO DATA(lx_serialization).
-            RAISE EXCEPTION TYPE zcx_milo_validation
-              EXPORTING
-                textid   = zcx_milo_validation=>result_serialization_failed
-                previous = lx_serialization.
-        ENDTRY.
-
       CATCH zcx_milo_validation INTO DATA(lx_validation).
         rs_result-object_name = to_upper( iv_obj_name ).
         rs_result-error_code = get_validation_error_code( lx_validation ).
@@ -1072,6 +1054,7 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           mv_value_1 = CONV string( iv_page ).
     ENDIF.
 
+
     ls_role = get_active_role( iv_profile_id ).
 
     zcl_milo_executor=>execute_select(
@@ -1097,6 +1080,7 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
   METHOD run_query_result.
 
     DATA lv_page TYPE i.
+
 
     CLEAR rs_result.
 
@@ -1125,7 +1109,9 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
         rs_result-page = lv_page.
         rs_result-page_size = rs_result-max_rows.
         IF rs_result-page_size > 0.
+
           rs_result-total_pages = rs_result-total_rows DIV rs_result-page_size.
+
           IF rs_result-total_rows MOD rs_result-page_size <> 0.
             rs_result-total_pages = rs_result-total_pages + 1.
           ENDIF.
@@ -1247,10 +1233,6 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           CLEAR rs_result-rows_json.
           RETURN.
         ENDIF.
-
-        rs_result-columns_json = get_columns_json(
-          iv_profile_id = iv_profile_id
-          iv_obj_name   = rs_result-object_name ).
 
       CATCH zcx_milo_validation INTO DATA(lx_validation).
         rs_result-error_code = get_validation_error_code( lx_validation ).

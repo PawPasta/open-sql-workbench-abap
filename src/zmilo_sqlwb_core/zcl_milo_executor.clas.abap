@@ -69,6 +69,7 @@ CLASS zcl_milo_executor DEFINITION
       IMPORTING
         is_parts            TYPE zcl_milo_sql_parser=>ty_query_parts
         iv_wlist_profile_id TYPE zmilo_wlist_profile_id
+        iv_mask_profile_id  TYPE zmilo_mask_profile_id OPTIONAL
         iv_page             TYPE i
       EXPORTING
         ev_object_name      TYPE zmilo_obj_name
@@ -154,6 +155,12 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
 
     LOOP AT is_parts-fields INTO DATA(ls_field).
 
+      "Aggregate outputs are calculated values. String-based mask rules are
+      "applied only to direct source fields to preserve aggregate data types.
+      IF ls_field-is_aggregate = abap_true.
+        CONTINUE.
+      ENDIF.
+
       CLEAR lv_source_object.
 
       LOOP AT is_parts-sources INTO DATA(ls_source).
@@ -230,6 +237,10 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
     ev_max_rows = zcl_milo_config=>get_object_max_rows(
       iv_wlist_profile_id = iv_wlist_profile_id
       iv_obj_name         = ev_object_name ).
+
+    IF is_parts-has_top = abap_true.
+      ev_max_rows = is_parts-top_rows.
+    ENDIF.
 
     lv_page = iv_page.
     IF lv_page IS INITIAL OR lv_page < 1.
@@ -502,6 +513,11 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
     ev_row_count = ev_returned_rows.
     ev_truncated = xsdbool( ev_returned_rows >= ev_max_rows ).
 
+    apply_join_mask(
+      is_parts           = is_parts
+      iv_mask_profile_id = iv_mask_profile_id
+      ir_data            = lr_table ).
+
     ev_rows_json = serialize_result(
       ir_data    = lr_table
       iv_columns = lv_json_columns ).
@@ -540,6 +556,10 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
     ev_max_rows = zcl_milo_config=>get_object_max_rows(
       iv_wlist_profile_id = iv_wlist_profile_id
       iv_obj_name         = ev_object_name ).
+
+    IF is_parts-has_top = abap_true.
+      ev_max_rows = is_parts-top_rows.
+    ENDIF.
 
     lv_page = iv_page.
     IF lv_page IS INITIAL OR lv_page < 1.
@@ -784,6 +804,7 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
             EXPORTING
               is_parts            = ls_parts
               iv_wlist_profile_id = iv_wlist_profile_id
+              iv_mask_profile_id  = iv_mask_profile_id
               iv_page             = iv_page
             IMPORTING
               ev_object_name      = ev_object_name
@@ -883,6 +904,10 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
           iv_wlist_profile_id = iv_wlist_profile_id
           iv_obj_name         = ev_object_name ).
 
+        IF ls_parts-has_top = abap_true.
+          ev_max_rows = ls_parts-top_rows.
+        ENDIF.
+
         lv_page = iv_page.
         IF lv_page IS INITIAL OR lv_page < 1.
           lv_page = 1.
@@ -948,125 +973,61 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
 
         ENDIF.
 
-        IF ls_parts-columns = '*'.
+        IF ls_parts-where_sql IS INITIAL
+           AND ls_parts-order_sql IS INITIAL.
 
-          IF ls_parts-where_sql IS INITIAL
-             AND ls_parts-order_sql IS INITIAL.
+          SELECT (ls_parts-columns)
+            FROM (ev_object_name)
+            INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
+            UP TO @ev_max_rows ROWS.
 
-            SELECT *
-              FROM (ev_object_name)
-              INTO TABLE @<lt_data>
-              UP TO @ev_max_rows ROWS.
+        ELSEIF ls_parts-where_sql IS NOT INITIAL
+           AND ls_parts-order_sql IS INITIAL.
 
-          ELSEIF ls_parts-where_sql IS NOT INITIAL
-             AND ls_parts-order_sql IS INITIAL.
+          SELECT (ls_parts-columns)
+            FROM (ev_object_name)
+            WHERE (ls_parts-where_sql)
+            INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
+            UP TO @ev_max_rows ROWS.
 
-            SELECT *
-              FROM (ev_object_name)
-              WHERE (ls_parts-where_sql)
-              INTO TABLE @<lt_data>
-              UP TO @ev_max_rows ROWS.
+        ELSEIF ls_parts-where_sql IS INITIAL
+           AND ls_parts-order_sql IS NOT INITIAL
+           AND lv_page = 1.
 
-          ELSEIF ls_parts-where_sql IS INITIAL
-             AND ls_parts-order_sql IS NOT INITIAL
-             AND lv_page = 1.
+          SELECT (ls_parts-columns)
+            FROM (ev_object_name)
+            ORDER BY (ls_parts-order_sql)
+            INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
+            UP TO @ev_max_rows ROWS.
 
-            SELECT *
-              FROM (ev_object_name)
-              ORDER BY (ls_parts-order_sql)
-              INTO TABLE @<lt_data>
-              UP TO @ev_max_rows ROWS.
+        ELSEIF ls_parts-where_sql IS INITIAL
+           AND ls_parts-order_sql IS NOT INITIAL.
 
-          ELSEIF ls_parts-where_sql IS INITIAL
-             AND ls_parts-order_sql IS NOT INITIAL.
+          SELECT (ls_parts-columns)
+            FROM (ev_object_name)
+            ORDER BY (ls_parts-order_sql)
+            INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
+            UP TO @ev_max_rows ROWS
+            OFFSET @lv_offset.
 
-            SELECT *
-              FROM (ev_object_name)
-              ORDER BY (ls_parts-order_sql)
-              INTO TABLE @<lt_data>
-              UP TO @ev_max_rows ROWS
-              OFFSET @lv_offset.
+        ELSEIF lv_page = 1.
 
-          ELSEIF lv_page = 1.
-
-            SELECT *
-              FROM (ev_object_name)
-              WHERE (ls_parts-where_sql)
-              ORDER BY (ls_parts-order_sql)
-              INTO TABLE @<lt_data>
-              UP TO @ev_max_rows ROWS.
-
-          ELSE.
-
-            SELECT *
-              FROM (ev_object_name)
-              WHERE (ls_parts-where_sql)
-              ORDER BY (ls_parts-order_sql)
-              INTO TABLE @<lt_data>
-              UP TO @ev_max_rows ROWS
-              OFFSET @lv_offset.
-
-          ENDIF.
+          SELECT (ls_parts-columns)
+            FROM (ev_object_name)
+            WHERE (ls_parts-where_sql)
+            ORDER BY (ls_parts-order_sql)
+            INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
+            UP TO @ev_max_rows ROWS.
 
         ELSE.
 
-          IF ls_parts-where_sql IS INITIAL
-             AND ls_parts-order_sql IS INITIAL.
-
-            SELECT (ls_parts-columns)
-              FROM (ev_object_name)
-              INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
-              UP TO @ev_max_rows ROWS.
-
-          ELSEIF ls_parts-where_sql IS NOT INITIAL
-             AND ls_parts-order_sql IS INITIAL.
-
-            SELECT (ls_parts-columns)
-              FROM (ev_object_name)
-              WHERE (ls_parts-where_sql)
-              INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
-              UP TO @ev_max_rows ROWS.
-
-          ELSEIF ls_parts-where_sql IS INITIAL
-             AND ls_parts-order_sql IS NOT INITIAL
-             AND lv_page = 1.
-
-            SELECT (ls_parts-columns)
-              FROM (ev_object_name)
-              ORDER BY (ls_parts-order_sql)
-              INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
-              UP TO @ev_max_rows ROWS.
-
-          ELSEIF ls_parts-where_sql IS INITIAL
-             AND ls_parts-order_sql IS NOT INITIAL.
-
-            SELECT (ls_parts-columns)
-              FROM (ev_object_name)
-              ORDER BY (ls_parts-order_sql)
-              INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
-              UP TO @ev_max_rows ROWS
-              OFFSET @lv_offset.
-
-          ELSEIF lv_page = 1.
-
-            SELECT (ls_parts-columns)
-              FROM (ev_object_name)
-              WHERE (ls_parts-where_sql)
-              ORDER BY (ls_parts-order_sql)
-              INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
-              UP TO @ev_max_rows ROWS.
-
-          ELSE.
-
-            SELECT (ls_parts-columns)
-              FROM (ev_object_name)
-              WHERE (ls_parts-where_sql)
-              ORDER BY (ls_parts-order_sql)
-              INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
-              UP TO @ev_max_rows ROWS
-              OFFSET @lv_offset.
-
-          ENDIF.
+          SELECT (ls_parts-columns)
+            FROM (ev_object_name)
+            WHERE (ls_parts-where_sql)
+            ORDER BY (ls_parts-order_sql)
+            INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
+            UP TO @ev_max_rows ROWS
+            OFFSET @lv_offset.
 
         ENDIF.
 

@@ -58,16 +58,20 @@ CLASS zcl_milo_result_repo DEFINITION
 
     CLASS-METHODS list_columns
       IMPORTING
-        iv_result_id     TYPE sysuuid_x16
+        iv_result_id           TYPE sysuuid_x16
+      EXPORTING
+        VALUE(ev_access_state) TYPE string
       RETURNING
-        VALUE(rt_column) TYPE tt_column.
+        VALUE(rt_column)       TYPE tt_column.
 
     CLASS-METHODS list_page_chunks
       IMPORTING
-        iv_result_id   TYPE sysuuid_x16
-        iv_page_no     TYPE i
+        iv_result_id           TYPE sysuuid_x16
+        iv_page_no             TYPE i
+      EXPORTING
+        VALUE(ev_access_state) TYPE string
       RETURNING
-        VALUE(rt_page) TYPE tt_page.
+        VALUE(rt_page)         TYPE tt_page.
 
     CLASS-METHODS delete_result
       IMPORTING
@@ -78,11 +82,8 @@ CLASS zcl_milo_result_repo DEFINITION
   PROTECTED SECTION.
   PRIVATE SECTION.
 
-    CLASS-METHODS is_result_visible
-      IMPORTING
-        iv_result_id      TYPE sysuuid_x16
-      RETURNING
-        VALUE(rv_visible) TYPE abap_bool.
+    CONSTANTS c_cleanup_batch_size TYPE i VALUE 500.
+    CONSTANTS c_result_ttl_seconds TYPE i VALUE 1800.
 
 ENDCLASS.
 
@@ -156,30 +157,48 @@ CLASS ZCL_MILO_RESULT_REPO IMPLEMENTATION.
 
   METHOD cleanup_expired.
 
-    DATA lv_now  TYPE timestampl.
-    DATA lt_head TYPE tt_head.
+    DATA lv_now TYPE timestampl.
+    DATA lv_initial_timestamp TYPE timestampl.
+    DATA lt_result_id TYPE STANDARD TABLE OF sysuuid_x16 WITH EMPTY KEY.
+    DATA lr_result_id TYPE RANGE OF sysuuid_x16.
 
     GET TIME STAMP FIELD lv_now.
 
-    SELECT *
-      FROM zmilo_rhead
-      INTO TABLE @lt_head.
+    DO.
+      CLEAR: lt_result_id,
+             lr_result_id.
 
-    LOOP AT lt_head INTO DATA(ls_head).
+      SELECT result_id
+        FROM zmilo_rhead
+        WHERE expires_at <> @lv_initial_timestamp
+          AND expires_at <= @lv_now
+        ORDER BY expires_at
+        INTO TABLE @lt_result_id
+        UP TO @c_cleanup_batch_size ROWS.
 
-      TRY.
+      IF lt_result_id IS INITIAL.
+        EXIT.
+      ENDIF.
 
-          IF ( ls_head-expires_at IS NOT INITIAL
-               AND ls_head-expires_at <= lv_now ).
+      LOOP AT lt_result_id INTO DATA(lv_result_id).
+        APPEND VALUE #(
+          sign   = 'I'
+          option = 'EQ'
+          low    = lv_result_id )
+          TO lr_result_id.
+      ENDLOOP.
 
-            delete_result( ls_head-result_id ).
+      DELETE FROM zmilo_rpage
+        WHERE result_id IN @lr_result_id.
 
-          ENDIF.
+      DELETE FROM zmilo_rcol
+        WHERE result_id IN @lr_result_id.
 
-        CATCH cx_root.
-      ENDTRY.
+      DELETE FROM zmilo_rhead
+        WHERE result_id IN @lr_result_id.
 
-    ENDLOOP.
+      COMMIT WORK AND WAIT.
+    ENDDO.
 
   ENDMETHOD.
 
@@ -224,17 +243,11 @@ CLASS ZCL_MILO_RESULT_REPO IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD is_result_visible.
-
-    rv_visible = xsdbool(
-      get_result_access_state( iv_result_id ) = 'VISIBLE' ).
-
-  ENDMETHOD.
-
-
   METHOD list_columns.
 
-    IF is_result_visible( iv_result_id ) <> abap_true.
+    ev_access_state = get_result_access_state( iv_result_id ).
+
+    IF ev_access_state <> 'VISIBLE'.
       RETURN.
     ENDIF.
 
@@ -249,7 +262,9 @@ CLASS ZCL_MILO_RESULT_REPO IMPLEMENTATION.
 
   METHOD list_page_chunks.
 
-    IF is_result_visible( iv_result_id ) <> abap_true.
+    ev_access_state = get_result_access_state( iv_result_id ).
+
+    IF ev_access_state <> 'VISIBLE'.
       RETURN.
     ENDIF.
 
@@ -327,16 +342,12 @@ CLASS ZCL_MILO_RESULT_REPO IMPLEMENTATION.
     IF ls_head-created_at IS INITIAL.
       GET TIME STAMP FIELD ls_head-created_at.
     ENDIF.
-
     TRY.
-        DELETE FROM zmilo_rpage
-          WHERE result_id = @ls_head-result_id.
-
-        DELETE FROM zmilo_rcol
-          WHERE result_id = @ls_head-result_id.
-
-        DELETE FROM zmilo_rhead
-          WHERE result_id = @ls_head-result_id.
+        IF ls_head-expires_at IS INITIAL.
+          ls_head-expires_at = cl_abap_tstmp=>add(
+            tstmp = ls_head-created_at
+            secs  = c_result_ttl_seconds ).
+        ENDIF.
 
         LOOP AT lt_column ASSIGNING FIELD-SYMBOL(<ls_column>).
           <ls_column>-mandt = sy-mandt.

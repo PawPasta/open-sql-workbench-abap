@@ -23,8 +23,6 @@ CLASS zcl_milo_sql_parser DEFINITION
 
     TYPES tt_join TYPE STANDARD TABLE OF ty_join WITH EMPTY KEY.
 
-    "Tạo type đại diện cho thông tin từng field sau khi prase SQL
-    "Ví dụ SELECT CARRID, CONNID FROM SFLIGHT thì có 3 field là CARRID và CONNID
     TYPES:
       BEGIN OF ty_select_field,
         source_alias TYPE string,
@@ -35,14 +33,14 @@ CLASS zcl_milo_sql_parser DEFINITION
         is_distinct  TYPE abap_bool,
       END OF ty_select_field.
 
-    "Tạo danh sách chứa các type field
     TYPES tt_select_field TYPE STANDARD TABLE OF ty_select_field WITH EMPTY KEY.
 
-    "Tạo type chứa các parts của sql sau khi được prase
     TYPES:
       BEGIN OF ty_query_parts,
         table_name TYPE zmilo_obj_name,
         columns    TYPE string,
+        top_rows   TYPE i,
+        has_top    TYPE abap_bool,
         from_sql   TYPE string,
         where_sql  TYPE string,
         group_sql  TYPE string,
@@ -147,6 +145,9 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
 
     DATA lv_sql TYPE string.
     DATA lv_cols TYPE string.
+    DATA lv_top_text TYPE string.
+    DATA lv_top_token TYPE string.
+    DATA lv_select_pattern TYPE string.
     DATA lv_table TYPE zmilo_obj_name.
     DATA lv_from TYPE string.
     DATA lv_where TYPE string.
@@ -176,6 +177,24 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
     lv_sql = uppercase_outside_literals( lv_sql ).
 
     CLEAR rs_parts.
+
+    IF lv_sql = 'SELECT TOP'
+       OR lv_sql CP 'SELECT TOP *'.
+      FIND PCRE '^SELECT[[:space:]]+TOP[[:space:]]+([0-9]{1,9})[[:space:]]+.+$'
+        IN lv_sql
+        SUBMATCHES lv_top_text.
+
+      IF sy-subrc <> 0.
+        FIND PCRE '^SELECT[[:space:]]+TOP(?:[[:space:]]+([^[:space:]]+))?'
+          IN lv_sql
+          SUBMATCHES lv_top_token.
+
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid     = zcx_milo_validation=>top_value_invalid
+            mv_value_1 = lv_top_token.
+      ENDIF.
+    ENDIF.
 
     FIND ALL OCCURRENCES OF '('
       IN lv_sql
@@ -328,9 +347,16 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
           mv_clause_name = 'ORDER BY'.
     ENDIF.
 
-    FIND PCRE '^SELECT[[:space:]]+(.+?)[[:space:]]+FROM[[:space:]]+(.+?)([[:space:]]+WHERE[[:space:]]+|[[:space:]]+GROUP[[:space:]]+BY[[:space:]]+|[[:space:]]+HAVING[[:space:]]+|[[:space:]]+ORDER[[:space:]]+BY[[:space:]]+|$)'
+    CLEAR lv_top_text.
+    lv_select_pattern =
+      '^SELECT(?:[[:space:]]+TOP[[:space:]]+([0-9]{1,9}))?[[:space:]]+(.+?)' &&
+      '[[:space:]]+FROM[[:space:]]+(.+?)([[:space:]]+WHERE[[:space:]]+|' &&
+      '[[:space:]]+GROUP[[:space:]]+BY[[:space:]]+|[[:space:]]+HAVING[[:space:]]+|' &&
+      '[[:space:]]+ORDER[[:space:]]+BY[[:space:]]+|$)'.
+
+    FIND PCRE lv_select_pattern
       IN lv_sql
-      SUBMATCHES lv_cols lv_from.
+      SUBMATCHES lv_top_text lv_cols lv_from.
 
     IF sy-subrc <> 0 OR lv_cols IS INITIAL OR lv_from IS INITIAL.
       RAISE EXCEPTION TYPE zcx_milo_validation
@@ -340,7 +366,20 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
 
     rs_parts-columns    = condense( lv_cols ).
     rs_parts-from_sql   = condense( lv_from ).
+
+    IF lv_top_text IS NOT INITIAL.
+      rs_parts-top_rows = lv_top_text.
+      IF rs_parts-top_rows <= 0.
+        RAISE EXCEPTION TYPE zcx_milo_validation
+          EXPORTING
+            textid     = zcx_milo_validation=>top_value_invalid
+            mv_value_1 = lv_top_text.
+      ENDIF.
+      rs_parts-has_top = abap_true.
+    ENDIF.
+
     REPLACE ALL OCCURRENCES OF ' LEFT JOIN ' IN rs_parts-from_sql WITH ' LEFT OUTER JOIN '.
+
 
     IF rs_parts-from_sql CS ' JOIN '.
 
@@ -375,6 +414,7 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
       iv_columns   = rs_parts-columns
       iv_join_mode = rs_parts-is_join ).
 
+
     FIND PCRE '[[:space:]]+WHERE[[:space:]]+(.+?)([[:space:]]+GROUP[[:space:]]+BY[[:space:]]+|[[:space:]]+HAVING[[:space:]]+|[[:space:]]+ORDER[[:space:]]+BY[[:space:]]+|$)'
       IN lv_sql
       SUBMATCHES lv_where.
@@ -382,6 +422,7 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
     IF sy-subrc = 0.
       rs_parts-where_sql = condense( lv_where ).
     ENDIF.
+
 
     FIND PCRE '[[:space:]]+GROUP[[:space:]]+BY[[:space:]]+(.+?)([[:space:]]+HAVING[[:space:]]+|[[:space:]]+ORDER[[:space:]]+BY[[:space:]]+|$)'
       IN lv_sql
@@ -391,6 +432,7 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
       rs_parts-group_sql = condense( lv_group ).
     ENDIF.
 
+
     FIND PCRE '[[:space:]]+HAVING[[:space:]]+(.+?)([[:space:]]+ORDER[[:space:]]+BY[[:space:]]+|$)'
       IN lv_sql
       SUBMATCHES lv_having.
@@ -398,6 +440,7 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
     IF sy-subrc = 0.
       rs_parts-having_sql = normalize_count_distinct_sql( lv_having ).
     ENDIF.
+
 
     FIND PCRE '[[:space:]]+ORDER[[:space:]]+BY[[:space:]]+(.+)$'
       IN lv_sql
@@ -818,7 +861,6 @@ CLASS ZCL_MILO_SQL_PARSER IMPLEMENTATION.
 
     rv_sql = condense( iv_sql ).
 
-    "Backtick string literals preserve the trailing blank after "(".
     REPLACE ALL OCCURRENCES OF ` )` IN rv_sql WITH `)`.
     REPLACE ALL OCCURRENCES OF `COUNT(` IN rv_sql WITH `COUNT( `.
     REPLACE ALL OCCURRENCES OF `SUM(` IN rv_sql WITH `SUM( `.

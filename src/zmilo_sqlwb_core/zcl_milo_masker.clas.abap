@@ -10,6 +10,7 @@ CLASS ZCL_milo_MASKER DEFINITION
         iv_mask_profile_id TYPE zmilo_mask_profile_id
         iv_obj_name        TYPE zmilo_obj_name
         ir_data            TYPE REF TO data
+        iv_columns         TYPE string OPTIONAL
       RAISING
         zcx_milo_validation.
 
@@ -34,6 +35,10 @@ CLASS ZCL_MILO_MASKER IMPLEMENTATION.
   METHOD apply_mask.
 
     DATA lt_mask TYPE zcl_milo_config=>tt_mask.
+    DATA lt_column_token TYPE STANDARD TABLE OF string WITH EMPTY KEY.
+    DATA lt_selected_field TYPE HASHED TABLE OF zmilo_field_name
+      WITH UNIQUE KEY table_line.
+    DATA lv_selected_field TYPE zmilo_field_name.
 
     FIELD-SYMBOLS <lt_data> TYPE STANDARD TABLE.
     FIELD-SYMBOLS <ls_row>  TYPE any.
@@ -47,6 +52,18 @@ CLASS ZCL_MILO_MASKER IMPLEMENTATION.
       RETURN.
     ENDIF.
 
+    IF iv_columns IS NOT INITIAL.
+      SPLIT iv_columns AT ',' INTO TABLE lt_column_token.
+
+      LOOP AT lt_column_token INTO DATA(lv_column_token).
+        lv_selected_field = to_upper( condense( lv_column_token ) ).
+
+        IF lv_selected_field IS NOT INITIAL.
+          INSERT lv_selected_field INTO TABLE lt_selected_field.
+        ENDIF.
+      ENDLOOP.
+    ENDIF.
+
     ASSIGN ir_data->* TO <lt_data>.
     IF sy-subrc <> 0.
       RETURN.
@@ -54,6 +71,15 @@ CLASS ZCL_MILO_MASKER IMPLEMENTATION.
 
     LOOP AT <lt_data> ASSIGNING <ls_row>.
       LOOP AT lt_mask ASSIGNING FIELD-SYMBOL(<ls_mask>).
+
+        IF lt_selected_field IS NOT INITIAL.
+          READ TABLE lt_selected_field TRANSPORTING NO FIELDS
+            WITH TABLE KEY table_line = <ls_mask>-field_name.
+
+          IF sy-subrc <> 0.
+            CONTINUE.
+          ENDIF.
+        ENDIF.
 
         ASSIGN COMPONENT <ls_mask>-field_name OF STRUCTURE <ls_row> TO <lv_cell>.
         IF sy-subrc = 0.
