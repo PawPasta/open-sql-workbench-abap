@@ -110,10 +110,18 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
         origin_structure TYPE dd03l-precfield,
       END OF ty_include_context.
 
+    TYPES:
+      BEGIN OF ty_field_text,
+        fieldname TYPE dd03t-fieldname,
+        ddtext    TYPE dd03t-ddtext,
+      END OF ty_field_text.
+
     DATA lt_ddic_entry TYPE STANDARD TABLE OF ty_ddic_entry
       WITH EMPTY KEY.
     DATA lt_include_context TYPE STANDARD TABLE OF ty_include_context
       WITH EMPTY KEY.
+    DATA lt_field_text TYPE SORTED TABLE OF ty_field_text
+      WITH NON-UNIQUE KEY fieldname.
 
     lv_obj_name = to_upper( iv_obj_name ).
 
@@ -144,6 +152,14 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
           textid         = zcx_milo_validation=>ddic_metadata_not_found
           mv_object_name = lv_obj_name.
     ENDIF.
+
+    SELECT fieldname,
+           ddtext
+      FROM dd03t
+      WHERE tabname    = @lv_obj_name
+        AND ddlanguage = @sy-langu
+        AND as4local   = 'A'
+      INTO TABLE @lt_field_text.
 
     LOOP AT lt_ddic_entry INTO DATA(ls_ddic_entry).
       lv_depth = ls_ddic_entry-adminfield.
@@ -198,13 +214,12 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
         ENDIF.
       ENDIF.
 
-      SELECT SINGLE ddtext
-        FROM dd03t
-        WHERE tabname    = @lv_obj_name
-          AND fieldname  = @<ls_field>-fieldname
-          AND ddlanguage = @sy-langu
-          AND as4local   = 'A'
-        INTO @<ls_field>-ddtext.
+      READ TABLE lt_field_text INTO DATA(ls_field_text)
+        WITH KEY fieldname = <ls_field>-fieldname.
+
+      IF sy-subrc = 0.
+        <ls_field>-ddtext = ls_field_text-ddtext.
+      ENDIF.
     ENDLOOP.
 
   ENDMETHOD.
@@ -220,7 +235,6 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
     DATA lv_columns TYPE string.
     DATA lv_field_count TYPE i.
     DATA lt_field TYPE tt_field_info.
-    DATA lt_result_field TYPE tt_field_info.
 
     FIELD-SYMBOLS <lt_data> TYPE STANDARD TABLE.
 
@@ -267,6 +281,28 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
 
     ev_object_name = lv_obj_name.
 
+    lt_field = get_fields( lv_obj_name ).
+
+    LOOP AT lt_field INTO DATA(ls_field).
+      lv_field_count = lv_field_count + 1.
+      IF lv_field_count > zcl_milo_config=>c_max_select_fields.
+        EXIT.
+      ENDIF.
+
+      IF lv_columns IS INITIAL.
+        lv_columns = ls_field-fieldname.
+      ELSE.
+        lv_columns = lv_columns && ',' && ls_field-fieldname.
+      ENDIF.
+    ENDLOOP.
+
+    IF lv_columns IS INITIAL.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid         = zcx_milo_validation=>ddic_metadata_not_found
+          mv_object_name = lv_obj_name.
+    ENDIF.
+
     CREATE DATA lr_table TYPE STANDARD TABLE OF (lv_obj_name).
     ASSIGN lr_table->* TO <lt_data>.
 
@@ -274,10 +310,10 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
       FROM (lv_obj_name)
       INTO @ev_total_rows.
 
-    SELECT *
+    SELECT (lv_columns)
       FROM (lv_obj_name)
       ORDER BY PRIMARY KEY
-      INTO TABLE @<lt_data>
+      INTO CORRESPONDING FIELDS OF TABLE @<lt_data>
       UP TO @lv_row_limit ROWS
       OFFSET @lv_offset.
 
@@ -287,35 +323,14 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
       zcl_milo_masker=>apply_mask(
         iv_mask_profile_id = iv_mask_profile_id
         iv_obj_name        = lv_obj_name
-        ir_data            = lr_table ).
+        ir_data            = lr_table
+        iv_columns         = lv_columns ).
     ENDIF.
 
-    lt_field = get_fields( lv_obj_name ).
-
-    LOOP AT lt_field INTO DATA(ls_field).
-      lv_field_count = lv_field_count + 1.
-      IF lv_field_count > zcl_milo_config=>c_max_select_fields.
-        EXIT.
-      ENDIF.
-      APPEND ls_field TO lt_result_field.
-    ENDLOOP.
-
-    LOOP AT lt_result_field INTO DATA(ls_result_field).
-      IF lv_columns IS INITIAL.
-        lv_columns = ls_result_field-fieldname.
-      ELSE.
-        lv_columns = lv_columns && ',' && ls_result_field-fieldname.
-      ENDIF.
-    ENDLOOP.
-
     TRY.
-        IF lv_columns IS INITIAL.
-          ev_rows_json = zcl_milo_serializer=>table_to_json( lr_table ).
-        ELSE.
-          ev_rows_json = zcl_milo_serializer=>table_to_json_selected(
-            ir_data    = lr_table
-            iv_columns = lv_columns ).
-        ENDIF.
+        ev_rows_json = zcl_milo_serializer=>table_to_json_selected(
+          ir_data    = lr_table
+          iv_columns = lv_columns ).
       CATCH cx_root INTO DATA(lx_serialization).
         RAISE EXCEPTION TYPE zcx_milo_validation
           EXPORTING
