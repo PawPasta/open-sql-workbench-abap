@@ -83,11 +83,13 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
 
     FIELD-SYMBOLS <ls_parameter> TYPE /iwbep/s_mgw_name_value_pair.
 
+
     lv_action_name = to_upper( iv_action_name ).
 
     CASE lv_action_name.
 
       WHEN 'RUNQUERY'.
+
 
         LOOP AT it_parameter ASSIGNING <ls_parameter>.
           CASE to_upper( <ls_parameter>-name ).
@@ -104,6 +106,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         IF lv_page_supplied <> abap_true.
           lv_page = 1.
         ENDIF.
+
 
         lv_result_id = zcl_milo_result_repo=>create_result_id( ).
 
@@ -122,6 +125,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         ENDIF.
 
         lv_result_c32 = zcl_milo_result_repo=>result_id_to_c32( lv_result_id ).
+
 
         ls_srv_result = zcl_milo_service=>run_query_result(
           iv_profile_id = lv_profile_id
@@ -144,6 +148,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         ls_head-error_code    = ls_srv_result-error_code.
         ls_head-error_text    = ls_srv_result-error_text.
         GET TIME STAMP FIELD ls_head-created_at.
+
 
         IF ls_srv_result-status = 'SUCCESS'.
 
@@ -221,6 +226,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         ls_response-errorcode    = ls_srv_result-error_code.
         ls_response-errortext    = ls_srv_result-error_text.
 
+
         copy_data_to_ref(
           EXPORTING
             is_data = ls_response
@@ -266,6 +272,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
               iv_tags         = lv_tags
               iv_description  = lv_description ).
 
+
             lv_query_id_c32 = zcl_milo_result_repo=>result_id_to_c32( lv_query_id ).
 
             IF lv_query_id IS INITIAL.
@@ -307,6 +314,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           CHANGING
             cr_data = er_data ).
 
+
       WHEN 'RUNSAVEDQUERY'.
 
         CLEAR: lv_profile_id,
@@ -324,6 +332,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
                lt_page,
                ls_response.
 
+
         LOOP AT it_parameter ASSIGNING <ls_parameter>.
           CASE to_upper( <ls_parameter>-name ).
             WHEN 'PROFILEID'.
@@ -339,6 +348,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         IF lv_page_supplied <> abap_true.
           lv_page = 1.
         ENDIF.
+
 
         lv_query_id = zcl_milo_result_repo=>result_id_from_c32( lv_query_id_c32 ).
 
@@ -398,7 +408,6 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         IF ls_srv_result-status = 'SUCCESS'.
 
           TRY.
-              "Lấy SQLTEXT từ ls_saved_query
               ls_saved_query = zcl_milo_query_repo=>get_query(
                 iv_query_id   = lv_query_id
                 iv_profile_id = lv_profile_id ).
@@ -644,20 +653,25 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           ENDCASE.
         ENDLOOP.
 
+
         IF lv_max_rows IS INITIAL.
           lv_max_rows = 50.
         ENDIF.
 
+
         DATA lt_table_response TYPE zcl_zsu26_gw_milo_mpc=>tt_sqlwbtable.
 
         TRY.
+
             DATA(lt_table) = zcl_milo_service=>search_ddic_tables(
               iv_profile_id = lv_profile_id
               iv_search     = lv_search_text
               iv_max_rows   = lv_max_rows ).
 
             LOOP AT lt_table INTO DATA(ls_table).
+
               APPEND INITIAL LINE TO lt_table_response ASSIGNING FIELD-SYMBOL(<ls_table_response>).
+
               <ls_table_response>-profileid = lv_profile_id.
               <ls_table_response>-objectname = ls_table-tabname.
 
@@ -677,7 +691,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
             lv_search_error_text = lx_search_validation->get_text( ).
             mo_context->get_message_container( )->add_message_text_only(
               iv_msg_type = 'E'
-              iv_msg_text = lv_search_error_text  ).
+              iv_msg_text = lv_search_error_text ).
             RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
               EXPORTING
                 message_container = mo_context->get_message_container( ).
@@ -946,6 +960,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
 
     ENDCASE.
 
+
   ENDMETHOD.
 
 
@@ -983,8 +998,13 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           message_container = mo_context->get_message_container( ).
     ENDIF.
 
-    lv_access_state =
-      zcl_milo_result_repo=>get_result_access_state( lv_result_id ).
+    zcl_milo_result_repo=>list_columns(
+      EXPORTING
+        iv_result_id = lv_result_id
+      IMPORTING
+        ev_access_state = lv_access_state
+      RECEIVING
+        rt_column = lt_column ).
 
     CASE lv_access_state.
       WHEN 'NOT_FOUND' OR 'EXPIRED'.
@@ -1006,8 +1026,6 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           EXPORTING
             message_container = mo_context->get_message_container( ).
     ENDCASE.
-
-    lt_column = zcl_milo_result_repo=>list_columns( lv_result_id ).
 
     lv_skip = is_paging-skip.
     lv_top = is_paging-top.
@@ -1086,8 +1104,14 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           message_container = mo_context->get_message_container( ).
     ENDIF.
 
-    lv_access_state =
-      zcl_milo_result_repo=>get_result_access_state( lv_result_id ).
+    zcl_milo_result_repo=>list_page_chunks(
+      EXPORTING
+        iv_result_id = lv_result_id
+        iv_page_no   = lv_page_no
+      IMPORTING
+        ev_access_state = lv_access_state
+      RECEIVING
+        rt_page = lt_page ).
 
     CASE lv_access_state.
       WHEN 'NOT_FOUND' OR 'EXPIRED'.
@@ -1109,10 +1133,6 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           EXPORTING
             message_container = mo_context->get_message_container( ).
     ENDCASE.
-
-    lt_page = zcl_milo_result_repo=>list_page_chunks(
-      iv_result_id = lv_result_id
-      iv_page_no   = lv_page_no ).
 
     lv_skip = is_paging-skip.
     lv_top = is_paging-top.
