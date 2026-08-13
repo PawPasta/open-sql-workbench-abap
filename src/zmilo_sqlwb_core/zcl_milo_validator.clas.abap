@@ -26,6 +26,13 @@ CLASS zcl_milo_validator DEFINITION
       RAISING
         zcx_milo_validation.
 
+    CLASS-METHODS validate_top_limit
+      IMPORTING
+        is_parts            TYPE zcl_milo_sql_parser=>ty_query_parts
+        iv_wlist_profile_id TYPE zmilo_wlist_profile_id
+      RAISING
+        zcx_milo_validation.
+
     CLASS-METHODS validate_where_clause
       IMPORTING
         iv_sql      TYPE string
@@ -262,7 +269,7 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
     DATA lv_cols       TYPE string.
     DATA lv_field_name TYPE zmilo_field_name.
 
-    FIND PCRE '^SELECT\s+(.+?)\s+FROM\s+'
+    FIND PCRE '^SELECT(?:\s+TOP\s+[0-9]+)?\s+(.+?)\s+FROM\s+'
       IN iv_sql
       SUBMATCHES lv_cols.
 
@@ -1626,6 +1633,10 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
         is_parts           = ls_parts
         iv_wlist_profile_id = iv_wlist_profile_id ).
 
+      validate_top_limit(
+        is_parts             = ls_parts
+        iv_wlist_profile_id  = iv_wlist_profile_id ).
+
       RETURN.
 
     ENDIF.
@@ -1665,6 +1676,10 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
           mv_object_name = ev_object_name
           mv_value_1     = CONV string( iv_wlist_profile_id ).
     ENDIF.
+
+    validate_top_limit(
+      is_parts             = ls_parts
+      iv_wlist_profile_id  = iv_wlist_profile_id ).
 
     "========================
     " FIELD VALIDATION
@@ -2132,6 +2147,34 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
         EXPORTING
           textid     = zcx_milo_validation=>aggregate_argument_invalid
           mv_value_1 = lv_argument.
+    ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD validate_top_limit.
+
+    IF is_parts-has_top <> abap_true.
+      RETURN.
+    ENDIF.
+
+    IF is_parts-top_rows <= 0.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid     = zcx_milo_validation=>top_value_invalid
+          mv_value_1 = CONV string( is_parts-top_rows ).
+    ENDIF.
+
+    DATA(lv_max_rows) = zcl_milo_config=>get_object_max_rows(
+      iv_wlist_profile_id = iv_wlist_profile_id
+      iv_obj_name         = is_parts-table_name ).
+
+    IF is_parts-top_rows >= lv_max_rows.
+      RAISE EXCEPTION TYPE zcx_milo_validation
+        EXPORTING
+          textid     = zcx_milo_validation=>top_limit_exceeded
+          mv_value_1 = CONV string( is_parts-top_rows )
+          mv_value_2 = CONV string( lv_max_rows ).
     ENDIF.
 
   ENDMETHOD.

@@ -196,6 +196,10 @@ CLASS ZCL_MILO_ERROR_MAPPER IMPLEMENTATION.
       rv_error_code = 'PAGE_SIZE_INVALID'.
     ELSEIF ls_t100key = zcx_milo_validation=>paging_offset_overflow.
       rv_error_code = 'PAGING_OFFSET_OVERFLOW'.
+    ELSEIF ls_t100key = zcx_milo_validation=>top_value_invalid.
+      rv_error_code = 'TOP_VALUE_INVALID'.
+    ELSEIF ls_t100key = zcx_milo_validation=>top_limit_exceeded.
+      rv_error_code = 'TOP_LIMIT_EXCEEDED'.
     ELSEIF ls_t100key = zcx_milo_validation=>query_id_invalid.
       rv_error_code = 'QUERY_ID_INVALID'.
     ELSEIF ls_t100key = zcx_milo_validation=>saved_query_not_found.

@@ -990,6 +990,24 @@ public section.
       attr3 type scx_attrname value '',
       attr4 type scx_attrname value '',
     end of LOG_WRITE_FAILED .
+  constants:
+    begin of TOP_VALUE_INVALID,
+      msgid type symsgid value 'ZMIILO_MSG',
+      msgno type symsgno value '110',
+      attr1 type scx_attrname value 'MV_VALUE_1',
+      attr2 type scx_attrname value '',
+      attr3 type scx_attrname value '',
+      attr4 type scx_attrname value '',
+    end of TOP_VALUE_INVALID .
+  constants:
+    begin of TOP_LIMIT_EXCEEDED,
+      msgid type symsgid value 'ZMIILO_MSG',
+      msgno type symsgno value '111',
+      attr1 type scx_attrname value 'MV_VALUE_1',
+      attr2 type scx_attrname value 'MV_VALUE_2',
+      attr3 type scx_attrname value '',
+      attr4 type scx_attrname value '',
+    end of TOP_LIMIT_EXCEEDED .
   data MV_OBJECT_NAME type ZMILO_OBJ_NAME .
   data MV_FIELD_NAME type ZMILO_FIELD_NAME .
   data MV_PROFILE_ID type ZMILO_PROFILE_ID .

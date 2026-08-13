@@ -662,6 +662,18 @@
      <MSGNR>109</MSGNR>
      <TEXT>An unexpected internal error occurred; reference &amp;1</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>110</MSGNR>
+     <TEXT>TOP value &amp;1 must be a positive integer</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMIILO_MSG</ARBGB>
+     <MSGNR>111</MSGNR>
+     <TEXT>TOP value &amp;1 must be less than row limit &amp;2</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>
