@@ -11,6 +11,7 @@ CLASS zcl_milo_validator DEFINITION
         iv_wlist_profile_id TYPE zmilo_wlist_profile_id
       EXPORTING
         ev_object_name      TYPE zmilo_obj_name
+        es_parts            TYPE zcl_milo_sql_parser=>ty_query_parts
       RAISING
         zcx_milo_validation.
 
@@ -1549,7 +1550,8 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
 
     DATA ls_parts TYPE zcl_milo_sql_parser=>ty_query_parts.
 
-    CLEAR ev_object_name.
+    CLEAR: ev_object_name,
+       es_parts.
 
     lv_sql = condense( iv_sql ).
     lv_sql = zcl_milo_sql_parser=>uppercase_outside_literals( lv_sql ).
@@ -1618,6 +1620,7 @@ CLASS ZCL_MILO_VALIDATOR IMPLEMENTATION.
     "========================
 
     ls_parts = zcl_milo_sql_parser=>parse( lv_sql ).
+    es_parts = ls_parts.
 
     ev_object_name = ls_parts-table_name.
 
