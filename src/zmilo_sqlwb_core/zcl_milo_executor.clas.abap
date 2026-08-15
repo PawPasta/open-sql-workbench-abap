@@ -65,6 +65,17 @@ CLASS zcl_milo_executor DEFINITION
         cx_sy_dynamic_osql_syntax
         cx_sy_dynamic_osql_semantics.
 
+    CLASS-METHODS count_group_rows
+      IMPORTING
+        is_parts            TYPE zcl_milo_sql_parser=>ty_query_parts
+        iv_from             TYPE string
+        iv_having_sql       TYPE string
+      RETURNING
+        VALUE(rv_row_count) TYPE i
+      RAISING
+        cx_sy_dynamic_osql_syntax
+        cx_sy_dynamic_osql_semantics.
+
     CLASS-METHODS execute_group_select
       IMPORTING
         is_parts            TYPE zcl_milo_sql_parser=>ty_query_parts
@@ -356,6 +367,11 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
           textid = zcx_milo_validation=>invalid_field.
     ENDIF.
 
+    ev_row_count = count_group_rows(
+       is_parts      = is_parts
+       iv_from       = lv_from
+       iv_having_sql = lv_having_sql ).
+
     lo_struct_descr = cl_abap_structdescr=>create( lt_components ).
     lo_table_descr = cl_abap_tabledescr=>create( lo_struct_descr ).
     CREATE DATA lr_table TYPE HANDLE lo_table_descr.
@@ -511,7 +527,7 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
 
     ev_returned_rows = lines( <lt_data> ).
     ev_row_count = ev_returned_rows.
-    ev_truncated = xsdbool( ev_returned_rows >= ev_max_rows ).
+    ev_truncated = xsdbool( ev_row_count > ev_max_rows ).
 
     apply_join_mask(
       is_parts           = is_parts
@@ -794,9 +810,8 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
             iv_sql              = iv_sql
             iv_wlist_profile_id = iv_wlist_profile_id
           IMPORTING
-            ev_object_name      = ev_object_name ).
-
-        ls_parts = zcl_milo_sql_parser=>parse( iv_sql ).
+            ev_object_name      = ev_object_name
+            es_parts            = ls_parts ).
 
         IF ls_parts-group_sql IS NOT INITIAL.
 
@@ -1301,6 +1316,57 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
             textid   = zcx_milo_validation=>result_serialization_failed
             previous = lx_serialization.
     ENDTRY.
+
+  ENDMETHOD.
+
+
+  METHOD count_group_rows.
+    DATA lv_group_size TYPE int8.
+
+    CLEAR rv_row_count.
+
+    IF is_parts-where_sql IS INITIAL
+       AND iv_having_sql IS INITIAL.
+
+      SELECT COUNT( * )
+       FROM (iv_from)
+       GROUP BY (is_parts-group_sql)
+       INTO @lv_group_size.
+        rv_row_count = rv_row_count + 1.
+      ENDSELECT.
+
+    ELSEIF is_parts-where_sql IS NOT INITIAL
+       AND iv_having_sql IS INITIAL.
+
+      SELECT COUNT( * )
+        FROM (iv_from)
+        WHERE (is_parts-where_sql)
+        GROUP BY (is_parts-group_sql)
+        INTO @lv_group_size.
+        rv_row_count = rv_row_count + 1.
+      ENDSELECT.
+
+    ELSEIF is_parts-where_sql IS INITIAL.
+
+      SELECT COUNT( * )
+        FROM (iv_from)
+        GROUP BY (is_parts-group_sql)
+        HAVING (iv_having_sql)
+        INTO @lv_group_size.
+        rv_row_count = rv_row_count + 1.
+      ENDSELECT.
+
+    ELSE.
+
+      SELECT COUNT( * )
+        FROM (iv_from)
+        WHERE (is_parts-where_sql)
+        GROUP BY (is_parts-group_sql)
+        HAVING (iv_having_sql)
+        INTO @lv_group_size.
+        rv_row_count = rv_row_count + 1.
+      ENDSELECT.
+    ENDIF.
 
   ENDMETHOD.
 ENDCLASS.
