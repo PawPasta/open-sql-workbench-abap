@@ -128,6 +128,8 @@ CLASS zcl_milo_service DEFINITION
       IMPORTING
         iv_profile_id   TYPE zmilo_profile_id
         iv_owner_only   TYPE abap_bool DEFAULT abap_true
+        iv_skip         TYPE i OPTIONAL
+        iv_top          TYPE i OPTIONAL
       RETURNING
         VALUE(rt_query) TYPE tt_query
       RAISING
@@ -746,7 +748,9 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
     rt_query = zcl_milo_query_repo=>list_queries(
       iv_profile_id = iv_profile_id
       iv_owner_only = iv_owner_only
-      iv_allow_all  = abap_false ).
+      iv_allow_all  = abap_false
+      iv_skip       = iv_skip
+      iv_top        = iv_top ).
 
   ENDMETHOD.
 

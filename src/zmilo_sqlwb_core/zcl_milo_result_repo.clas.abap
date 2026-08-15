@@ -68,6 +68,8 @@ CLASS zcl_milo_result_repo DEFINITION
       IMPORTING
         iv_result_id           TYPE sysuuid_x16
         iv_page_no             TYPE i
+        iv_skip                TYPE i OPTIONAL
+        iv_top                 TYPE i OPTIONAL
       EXPORTING
         VALUE(ev_access_state) TYPE string
       RETURNING
@@ -262,18 +264,49 @@ CLASS ZCL_MILO_RESULT_REPO IMPLEMENTATION.
 
   METHOD list_page_chunks.
 
+    DATA lv_skip TYPE i.
+    DATA lv_top  TYPE i.
+
     ev_access_state = get_result_access_state( iv_result_id ).
 
     IF ev_access_state <> 'VISIBLE'.
       RETURN.
     ENDIF.
+    lv_skip = iv_skip.
+    lv_top = iv_top.
 
-    SELECT *
-      FROM zmilo_rpage
-      WHERE result_id = @iv_result_id
-        AND page_no   = @iv_page_no
-      ORDER BY chunk_no
-      INTO TABLE @rt_page.
+    IF lv_skip < 0.
+      CLEAR lv_skip.
+    ENDIF.
+    IF lv_top < 0.
+      CLEAR lv_top.
+    ENDIF.
+
+    IF lv_top > 0.
+      SELECT *
+        FROM zmilo_rpage
+        WHERE result_id = @iv_result_id
+          AND page_no   = @iv_page_no
+        ORDER BY chunk_no
+        INTO TABLE @rt_page
+        UP TO @lv_top ROWS
+        OFFSET @lv_skip.
+    ELSEIF lv_skip > 0.
+      SELECT *
+        FROM zmilo_rpage
+        WHERE result_id = @iv_result_id
+          AND page_no   = @iv_page_no
+        ORDER BY chunk_no
+        INTO TABLE @rt_page
+        OFFSET @lv_skip.
+    ELSE.
+      SELECT *
+        FROM zmilo_rpage
+        WHERE result_id = @iv_result_id
+          AND page_no   = @iv_page_no
+        ORDER BY chunk_no
+        INTO TABLE @rt_page.
+    ENDIF.
 
   ENDMETHOD.
 

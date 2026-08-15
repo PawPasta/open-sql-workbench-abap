@@ -62,6 +62,8 @@ CLASS zcl_milo_query_repo DEFINITION
         iv_profile_id   TYPE zmilo_profile_id
         iv_owner_only   TYPE abap_bool DEFAULT abap_true
         iv_allow_all    TYPE abap_bool DEFAULT abap_false
+        iv_skip         TYPE i OPTIONAL
+        iv_top          TYPE i OPTIONAL
       RETURNING
         VALUE(rt_query) TYPE tt_query.
 
@@ -90,36 +92,91 @@ CLASS ZCL_MILO_QUERY_REPO IMPLEMENTATION.
 
   METHOD list_queries.
 
-    IF iv_allow_all = abap_true.
+    DATA lv_skip TYPE i.
+    DATA lv_top  TYPE i.
 
-      SELECT *
-        FROM zmilo_query
-        WHERE is_active = 'X'
-        ORDER BY created_date DESCENDING,
-                 created_time DESCENDING
-        INTO TABLE @rt_query.
+    lv_skip = iv_skip.
+    lv_top = iv_top.
+
+    IF lv_skip < 0.
+      CLEAR lv_skip.
+    ENDIF.
+    IF lv_top < 0.
+      CLEAR lv_top.
+    ENDIF.
+
+    IF iv_allow_all = abap_true.
+      IF lv_top > 0.
+        SELECT *
+          FROM zmilo_query
+          WHERE is_active = 'X'
+          ORDER BY created_date DESCENDING,
+                   created_time DESCENDING,
+                   query_id DESCENDING
+          INTO TABLE @rt_query
+          UP TO @lv_top ROWS
+          OFFSET @lv_skip.
+      ELSE.
+        SELECT *
+          FROM zmilo_query
+          WHERE is_active = 'X'
+          ORDER BY created_date DESCENDING,
+                   created_time DESCENDING,
+                   query_id DESCENDING
+          INTO TABLE @rt_query
+          OFFSET @lv_skip.
+      ENDIF.
 
     ELSEIF iv_owner_only = abap_true.
-
-      SELECT *
-        FROM zmilo_query
-        WHERE is_active = 'X'
-          AND owner     = @sy-uname
-        ORDER BY created_date DESCENDING,
-                 created_time DESCENDING
-        INTO TABLE @rt_query.
-
+      IF lv_top > 0.
+        SELECT *
+          FROM zmilo_query
+          WHERE is_active = 'X'
+            AND owner     = @sy-uname
+          ORDER BY created_date DESCENDING,
+                   created_time DESCENDING,
+                   query_id DESCENDING
+          INTO TABLE @rt_query
+          UP TO @lv_top ROWS
+          OFFSET @lv_skip.
+      ELSE.
+        SELECT *
+          FROM zmilo_query
+          WHERE is_active = 'X'
+            AND owner     = @sy-uname
+          ORDER BY created_date DESCENDING,
+                   created_time DESCENDING,
+                   query_id DESCENDING
+          INTO TABLE @rt_query
+          OFFSET @lv_skip.
+      ENDIF.
     ELSE.
-
-      SELECT *
-        FROM zmilo_query
-        WHERE is_active = 'X'
-          AND ( owner = @sy-uname
-                OR ( visibility = 'PROFILE'
-                     AND profile_id = @iv_profile_id ) )
-        ORDER BY created_date DESCENDING,
-                 created_time DESCENDING
-        INTO TABLE @rt_query.
+      IF lv_top > 0.
+        SELECT *
+          FROM zmilo_query
+          WHERE is_active = 'X'
+            AND ( owner = @sy-uname
+                  OR ( visibility = 'PROFILE'
+                       AND profile_id = @iv_profile_id ) )
+          ORDER BY created_date DESCENDING,
+                   created_time DESCENDING,
+                   query_id DESCENDING
+          INTO TABLE @rt_query
+          UP TO @lv_top ROWS
+          OFFSET @lv_skip.
+      ELSE.
+        SELECT *
+          FROM zmilo_query
+          WHERE is_active = 'X'
+            AND ( owner = @sy-uname
+                  OR ( visibility = 'PROFILE'
+                       AND profile_id = @iv_profile_id ) )
+          ORDER BY created_date DESCENDING,
+                   created_time DESCENDING,
+                   query_id DESCENDING
+          INTO TABLE @rt_query
+          OFFSET @lv_skip.
+      ENDIF.
 
     ENDIF.
 

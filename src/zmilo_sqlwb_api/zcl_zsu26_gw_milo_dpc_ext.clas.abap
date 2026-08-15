@@ -1065,7 +1065,6 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
     DATA lv_result_msgv TYPE symsgv.
     DATA lv_result_id  TYPE sysuuid_x16.
     DATA lv_page_no    TYPE i.
-    DATA lv_row_no     TYPE i.
     DATA lv_skip       TYPE i.
     DATA lv_top        TYPE i.
     DATA lv_access_state TYPE string.
@@ -1092,6 +1091,8 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
 
     lv_result_id = zcl_milo_result_repo=>result_id_from_c32( lv_result_c32 ).
     lv_result_msgv = lv_result_c32.
+    lv_skip = is_paging-skip.
+    lv_top = is_paging-top.
 
     IF lv_result_id IS INITIAL.
       mo_context->get_message_container( )->add_message(
@@ -1108,6 +1109,8 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
       EXPORTING
         iv_result_id = lv_result_id
         iv_page_no   = lv_page_no
+        iv_skip      = lv_skip
+        iv_top       = lv_top
       IMPORTING
         ev_access_state = lv_access_state
       RECEIVING
@@ -1134,20 +1137,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
             message_container = mo_context->get_message_container( ).
     ENDCASE.
 
-    lv_skip = is_paging-skip.
-    lv_top = is_paging-top.
-
     LOOP AT lt_page INTO DATA(ls_page).
-      lv_row_no = lv_row_no + 1.
-
-      IF lv_row_no <= lv_skip.
-        CONTINUE.
-      ENDIF.
-
-      IF lv_top > 0 AND lv_row_no > lv_skip + lv_top.
-        EXIT.
-      ENDIF.
-
       APPEND INITIAL LINE TO et_entityset ASSIGNING FIELD-SYMBOL(<ls_entity>).
       <ls_entity>-resultid     = lv_result_c32.
       <ls_entity>-pageno       = ls_page-page_no.
