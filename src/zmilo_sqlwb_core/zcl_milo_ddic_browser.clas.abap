@@ -31,13 +31,6 @@ CLASS zcl_milo_ddic_browser DEFINITION
 
     TYPES tt_field_info TYPE STANDARD TABLE OF ty_field_info WITH EMPTY KEY.
 
-    CLASS-METHODS search_tables
-      IMPORTING
-        iv_search       TYPE string
-        iv_max_rows     TYPE i DEFAULT 50
-      RETURNING
-        VALUE(rt_table) TYPE tt_table_info.
-
     CLASS-METHODS get_fields
       IMPORTING
         iv_obj_name     TYPE zmilo_obj_name
@@ -61,20 +54,6 @@ CLASS zcl_milo_ddic_browser DEFINITION
       RAISING
         zcx_milo_validation.
 
-    CLASS-METHODS preview_table_csv
-      IMPORTING
-        iv_wlist_profile_id TYPE zmilo_wlist_profile_id
-        iv_mask_profile_id  TYPE zmilo_mask_profile_id OPTIONAL
-        iv_obj_name         TYPE zmilo_obj_name
-        iv_row_limit        TYPE i DEFAULT 100
-        iv_page             TYPE i DEFAULT 1
-      EXPORTING
-        ev_object_name      TYPE zmilo_obj_name
-        ev_row_count        TYPE i
-        ev_total_rows       TYPE i
-        ev_csv              TYPE string
-      RAISING
-        zcx_milo_validation.
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.
@@ -202,6 +181,7 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
       IF lv_depth = 0.
         <ls_field>-origin_type = 'DIRECT'.
       ELSE.
+        "Origin metadata preserves INCLUDE/APPEND lineage without nested JSON.
         READ TABLE lt_include_context INTO ls_include_context
           WITH KEY depth = lv_depth.
 
@@ -337,129 +317,6 @@ CLASS ZCL_MILO_DDIC_BROWSER IMPLEMENTATION.
             textid   = zcx_milo_validation=>result_serialization_failed
             previous = lx_serialization.
     ENDTRY.
-
-  ENDMETHOD.
-
-
-  METHOD preview_table_csv.
-
-    DATA lr_table TYPE REF TO data.
-    DATA lv_obj_name TYPE zmilo_obj_name.
-    DATA lv_row_limit TYPE i.
-    DATA lv_page TYPE i.
-    DATA lv_offset TYPE i.
-
-    FIELD-SYMBOLS <lt_data> TYPE STANDARD TABLE.
-
-    CLEAR: ev_object_name,
-           ev_row_count,
-           ev_total_rows,
-           ev_csv.
-
-    lv_obj_name = to_upper( iv_obj_name ).
-
-    IF lv_obj_name IS INITIAL.
-      RAISE EXCEPTION TYPE zcx_milo_validation
-        EXPORTING
-          textid = zcx_milo_validation=>parse_failed.
-    ENDIF.
-
-    IF zcl_milo_config=>is_object_allowed(
-         iv_wlist_profile_id = iv_wlist_profile_id
-         iv_obj_name         = lv_obj_name ) <> abap_true.
-      IF zcl_milo_config=>is_object_exists( lv_obj_name ) <> abap_true.
-        RAISE EXCEPTION TYPE zcx_milo_validation
-          EXPORTING
-            textid         = zcx_milo_validation=>object_not_found
-            mv_object_name = lv_obj_name.
-      ENDIF.
-
-      RAISE EXCEPTION TYPE zcx_milo_validation
-        EXPORTING
-          textid         = zcx_milo_validation=>object_not_whitelisted
-          mv_object_name = lv_obj_name
-          mv_value_1     = CONV string( iv_wlist_profile_id ).
-    ENDIF.
-
-    lv_row_limit = iv_row_limit.
-    IF lv_row_limit IS INITIAL OR lv_row_limit > 100.
-      lv_row_limit = 100.
-    ENDIF.
-
-    lv_page = iv_page.
-    IF lv_page IS INITIAL OR lv_page < 1.
-      lv_page = 1.
-    ENDIF.
-    lv_offset = ( lv_page - 1 ) * lv_row_limit.
-
-    ev_object_name = lv_obj_name.
-
-    CREATE DATA lr_table TYPE STANDARD TABLE OF (lv_obj_name).
-    ASSIGN lr_table->* TO <lt_data>.
-
-    SELECT COUNT(*)
-      FROM (lv_obj_name)
-      INTO @ev_total_rows.
-
-    SELECT *
-      FROM (lv_obj_name)
-      ORDER BY PRIMARY KEY
-      INTO TABLE @<lt_data>
-      UP TO @lv_row_limit ROWS
-      OFFSET @lv_offset.
-
-    ev_row_count = lines( <lt_data> ).
-
-    IF iv_mask_profile_id IS NOT INITIAL.
-      zcl_milo_masker=>apply_mask(
-        iv_mask_profile_id = iv_mask_profile_id
-        iv_obj_name        = lv_obj_name
-        ir_data            = lr_table ).
-    ENDIF.
-
-    ev_csv = zcl_milo_exporter=>table_to_csv( lr_table ).
-
-  ENDMETHOD.
-
-
-  METHOD search_tables.
-
-    DATA lv_pattern TYPE string.
-    DATA lv_max_rows TYPE i.
-
-    lv_pattern = to_upper( condense( iv_search ) ).
-
-    IF lv_pattern IS INITIAL.
-      lv_pattern = '%'.
-    ENDIF.
-
-    REPLACE ALL OCCURRENCES OF '*' IN lv_pattern WITH '%'.
-
-    IF lv_pattern NS '%'.
-      lv_pattern = '%' && lv_pattern && '%'.
-    ENDIF.
-
-    lv_max_rows = iv_max_rows.
-    IF lv_max_rows IS INITIAL OR lv_max_rows > 200.
-      lv_max_rows = 50.
-    ENDIF.
-
-    SELECT l~tabname,
-           l~tabclass,
-           t~ddtext
-      FROM dd02l AS l
-      LEFT OUTER JOIN dd02t AS t
-        ON  t~tabname    = l~tabname
-        AND t~ddlanguage = @sy-langu
-        AND t~as4local   = 'A'
-      WHERE l~as4local = 'A'
-        AND ( l~tabclass = 'TRANSP'
-           OR l~tabclass = 'VIEW' )
-        AND ( l~tabname LIKE @lv_pattern
-           OR t~ddtext  LIKE @lv_pattern )
-      ORDER BY l~tabname
-      INTO TABLE @rt_table
-      UP TO @lv_max_rows ROWS.
 
   ENDMETHOD.
 ENDCLASS.

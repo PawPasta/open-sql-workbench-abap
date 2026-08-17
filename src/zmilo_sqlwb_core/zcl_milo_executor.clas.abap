@@ -21,6 +21,7 @@ CLASS zcl_milo_executor DEFINITION
         ev_rows_json        TYPE string
         ev_error_code       TYPE zmilo_error_code
         ev_error_text       TYPE string
+        es_parts            TYPE zcl_milo_sql_parser=>ty_query_parts
       RAISING
         zcx_milo_validation.
 
@@ -41,6 +42,7 @@ CLASS zcl_milo_executor DEFINITION
         ev_rows_json        TYPE string
         ev_error_code       TYPE zmilo_error_code
         ev_error_text       TYPE string
+        es_parts            TYPE zcl_milo_sql_parser=>ty_query_parts
       RAISING
         zcx_milo_validation.
 
@@ -770,7 +772,8 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
         ev_truncated        = ev_truncated
         ev_rows_json        = ev_rows_json
         ev_error_code       = ev_error_code
-        ev_error_text       = ev_error_text ).
+         ev_error_text       = ev_error_text
+        es_parts            = es_parts ).
 
   ENDMETHOD.
 
@@ -803,7 +806,8 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
                ev_truncated,
                ev_rows_json,
                ev_error_code,
-               ev_error_text.
+                ev_error_text,
+               es_parts.
 
         zcl_milo_validator=>validate_select_sql(
           EXPORTING
@@ -812,6 +816,7 @@ CLASS ZCL_MILO_EXECUTOR IMPLEMENTATION.
           IMPORTING
             ev_object_name      = ev_object_name
             es_parts            = ls_parts ).
+        es_parts = ls_parts.
 
         IF ls_parts-group_sql IS NOT INITIAL.
 

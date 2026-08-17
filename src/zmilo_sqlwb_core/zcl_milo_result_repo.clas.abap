@@ -6,7 +6,6 @@ CLASS zcl_milo_result_repo DEFINITION
   PUBLIC SECTION.
 
     CONSTANTS c_chunk_size TYPE i VALUE 900.
-    TYPES tt_head   TYPE STANDARD TABLE OF zmilo_rhead WITH EMPTY KEY.
     TYPES tt_column TYPE STANDARD TABLE OF zmilo_rcol WITH EMPTY KEY.
     TYPES tt_page   TYPE STANDARD TABLE OF zmilo_rpage WITH EMPTY KEY.
 
@@ -49,12 +48,6 @@ CLASS zcl_milo_result_repo DEFINITION
         iv_result_id    TYPE sysuuid_x16
       RETURNING
         VALUE(rv_state) TYPE string.
-
-    CLASS-METHODS get_head
-      IMPORTING
-        iv_result_id   TYPE sysuuid_x16
-      RETURNING
-        VALUE(rs_head) TYPE zmilo_rhead.
 
     CLASS-METHODS list_columns
       IMPORTING
@@ -109,6 +102,7 @@ CLASS ZCL_MILO_RESULT_REPO IMPLEMENTATION.
     DESCRIBE FIELD ls_page-payload_part
       LENGTH lv_part_capacity IN CHARACTER MODE.
 
+
     IF c_chunk_size <= 0 OR c_chunk_size > lv_part_capacity.
       RAISE EXCEPTION TYPE zcx_milo_validation
         EXPORTING
@@ -122,6 +116,7 @@ CLASS ZCL_MILO_RESULT_REPO IMPLEMENTATION.
     ENDIF.
 
     GET TIME STAMP FIELD lv_created_at.
+
 
     WHILE lv_offset < lv_length.
 
@@ -165,6 +160,7 @@ CLASS ZCL_MILO_RESULT_REPO IMPLEMENTATION.
     DATA lr_result_id TYPE RANGE OF sysuuid_x16.
 
     GET TIME STAMP FIELD lv_now.
+
 
     DO.
       CLEAR: lt_result_id,
@@ -234,17 +230,6 @@ CLASS ZCL_MILO_RESULT_REPO IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD get_head.
-
-    SELECT SINGLE *
-      FROM zmilo_rhead
-      WHERE result_id = @iv_result_id
-        AND user_name = @sy-uname
-      INTO @rs_head.
-
-  ENDMETHOD.
-
-
   METHOD list_columns.
 
     ev_access_state = get_result_access_state( iv_result_id ).
@@ -272,6 +257,7 @@ CLASS ZCL_MILO_RESULT_REPO IMPLEMENTATION.
     IF ev_access_state <> 'VISIBLE'.
       RETURN.
     ENDIF.
+
     lv_skip = iv_skip.
     lv_top = iv_top.
 
