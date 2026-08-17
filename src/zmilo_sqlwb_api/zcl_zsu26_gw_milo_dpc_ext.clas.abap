@@ -27,22 +27,14 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
 
   METHOD /iwbep/if_mgw_appl_srv_runtime~execute_action.
 
-    TYPES:
-      BEGIN OF ty_run_result,
-        resultid     TYPE string,
-        status       TYPE string,
-        objectname   TYPE zmilo_obj_name,
-        rowcount     TYPE i,
-        returnedrows TYPE i,
-        totalrows    TYPE i,
-        maxrows      TYPE i,
-        page         TYPE i,
-        pagesize     TYPE i,
-        totalpages   TYPE i,
-        truncated    TYPE abap_bool,
-        errorcode    TYPE string,
-        errortext    TYPE string,
-      END OF ty_run_result.
+* Function Import: RunQuery
+* Function Import: PreviewTable
+* Function Import: SearchTables
+* Function Import: GetFields
+* Function Import: SaveQuery
+* Function Import: UpdateSavedQuery
+* Function Import: DeleteSavedQuery
+* Function Import: RunSavedQuery
 
     TYPES:
       BEGIN OF ty_save_query_result,
@@ -66,20 +58,13 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
     DATA lv_visibility   TYPE zmilo_visibility.
     DATA lv_tags         TYPE zmilo_tags.
     DATA lv_description  TYPE zmilo_description.
-
     DATA lv_result_id   TYPE sysuuid_x16.
-    DATA lv_result_c32  TYPE string.
     DATA ls_srv_result  TYPE zcl_milo_service=>ty_run_result.
-    DATA ls_head        TYPE zmilo_rhead.
-
-    DATA lt_result_field TYPE zcl_milo_service=>tt_ddic_field.
-    DATA lt_column      TYPE zcl_milo_result_repo=>tt_column.
-    DATA lt_page        TYPE zcl_milo_result_repo=>tt_page.
-    DATA ls_response    TYPE ty_run_result.
+    DATA ls_response    TYPE zcl_milo_odata_result=>ty_run_response.
     DATA ls_save_response TYPE ty_save_query_result.
-    DATA lv_result_saved TYPE abap_bool.
     DATA lv_mapped_error_code TYPE zmilo_error_code.
     DATA lv_search_error_text TYPE bapi_msg.
+
 
     FIELD-SYMBOLS <ls_parameter> TYPE /iwbep/s_mgw_name_value_pair.
 
@@ -89,7 +74,6 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
     CASE lv_action_name.
 
       WHEN 'RUNQUERY'.
-
 
         LOOP AT it_parameter ASSIGNING <ls_parameter>.
           CASE to_upper( <ls_parameter>-name ).
@@ -108,14 +92,12 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         ENDIF.
 
 
-        lv_result_id = zcl_milo_result_repo=>create_result_id( ).
+        zcl_milo_odata_result=>initialize_result(
+          IMPORTING
+            ev_result_id = lv_result_id
+            es_response  = ls_response ).
 
         IF lv_result_id IS INITIAL.
-          ls_response-status = 'ERROR'.
-          ls_response-errorcode = 'UUID_GENERATION_FAILED'.
-          ls_response-errortext =
-            zcl_milo_error_mapper=>get_safe_technical_text(
-              'UUID_GENERATION_FAILED' ).
           copy_data_to_ref(
             EXPORTING
               is_data = ls_response
@@ -124,108 +106,21 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           RETURN.
         ENDIF.
 
-        lv_result_c32 = zcl_milo_result_repo=>result_id_to_c32( lv_result_id ).
-
 
         ls_srv_result = zcl_milo_service=>run_query_result(
           iv_profile_id = lv_profile_id
           iv_sql        = lv_sql_text
           iv_page       = lv_page ).
 
-        ls_head-result_id     = lv_result_id.
-        ls_head-user_name     = sy-uname.
-        ls_head-profile_id    = lv_profile_id.
-        ls_head-object_name   = ls_srv_result-object_name.
-        ls_head-status        = ls_srv_result-status.
-        ls_head-row_count     = ls_srv_result-row_count.
-        ls_head-returned_rows = ls_srv_result-returned_rows.
-        ls_head-total_rows    = ls_srv_result-total_rows.
-        ls_head-max_rows      = ls_srv_result-max_rows.
-        ls_head-result_page   = ls_srv_result-page.
-        ls_head-page_size     = ls_srv_result-page_size.
-        ls_head-total_pages   = ls_srv_result-total_pages.
-        ls_head-truncated     = ls_srv_result-truncated.
-        ls_head-error_code    = ls_srv_result-error_code.
-        ls_head-error_text    = ls_srv_result-error_text.
-        GET TIME STAMP FIELD ls_head-created_at.
-
-
-        IF ls_srv_result-status = 'SUCCESS'.
-
-          TRY.
-
-              lt_column = zcl_milo_service=>build_result_columns(
-                iv_profile_id = lv_profile_id
-                iv_result_id  = lv_result_id
-              is_parts      = ls_srv_result-query_parts ).
-
-
-              lt_page = zcl_milo_result_repo=>build_page_chunks(
-                iv_result_id = lv_result_id
-                iv_page_no   = ls_srv_result-page
-                iv_rows_json = ls_srv_result-rows_json ).
-
-            CATCH zcx_milo_validation INTO DATA(lx_validation).
-              CLEAR lt_column.
-              CLEAR lt_page.
-              lv_mapped_error_code =
-                zcl_milo_service=>get_validation_error_code( lx_validation ).
-              ls_srv_result-error_code = lv_mapped_error_code.
-              IF zcl_milo_error_mapper=>is_technical_error_code(
-                   lv_mapped_error_code ) = abap_true.
-                ls_srv_result-status = 'ERROR'.
-                ls_srv_result-error_text =
-                  zcl_milo_error_mapper=>get_safe_technical_text(
-                    lv_mapped_error_code ).
-              ELSE.
-                ls_srv_result-status = 'BLOCKED'.
-                ls_srv_result-error_text = lx_validation->get_text( ).
-              ENDIF.
-              ls_head-status = ls_srv_result-status.
-              ls_head-error_code = ls_srv_result-error_code.
-              ls_head-error_text = ls_srv_result-error_text.
-            CATCH cx_root.
-              CLEAR lt_column.
-              CLEAR lt_page.
-              ls_srv_result-status = 'ERROR'.
-              ls_srv_result-error_code = 'INTERNAL_ERROR'.
-              ls_srv_result-error_text =
-                zcl_milo_error_mapper=>get_safe_technical_text(
-                  'INTERNAL_ERROR' ).
-              ls_head-status = ls_srv_result-status.
-              ls_head-error_code = ls_srv_result-error_code.
-              ls_head-error_text = ls_srv_result-error_text.
-          ENDTRY.
-
-        ENDIF.
-
-        lv_result_saved = zcl_milo_result_repo=>save_result(
-          is_head   = ls_head
-          it_column = lt_column
-          it_page   = lt_page ).
-
-        IF lv_result_saved <> abap_true.
-          ls_srv_result-status = 'ERROR'.
-          ls_srv_result-error_code = 'RESULT_STORAGE_FAILED'.
-          ls_srv_result-error_text =
-            zcl_milo_error_mapper=>get_safe_technical_text(
-              'RESULT_STORAGE_FAILED' ).
-          CLEAR lv_result_c32.
-        ENDIF.
-
-        ls_response-resultid     = lv_result_c32.
-        ls_response-status       = ls_srv_result-status.
-        ls_response-objectname   = ls_srv_result-object_name.
-        ls_response-rowcount     = ls_srv_result-row_count.
-        ls_response-returnedrows = ls_srv_result-returned_rows.
-        ls_response-totalrows    = ls_srv_result-total_rows.
-        ls_response-maxrows      = ls_srv_result-max_rows.
-        ls_response-page         = ls_srv_result-page.
-        ls_response-pagesize     = ls_srv_result-page_size.
-        ls_response-totalpages   = ls_srv_result-total_pages.
-        ls_response-truncated    = ls_srv_result-truncated.
-        ls_response-errorcode    = ls_srv_result-error_code.
-        ls_response-errortext    = ls_srv_result-error_text.
+        zcl_milo_odata_result=>finalize_result(
+          EXPORTING
+            iv_result_id     = lv_result_id
+            iv_profile_id    = lv_profile_id
+            iv_metadata_mode = zcl_milo_odata_result=>c_metadata_query
+          IMPORTING
+            es_response      = ls_response
+          CHANGING
+            cs_result        = ls_srv_result ).
 
 
         copy_data_to_ref(
@@ -315,7 +210,6 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           CHANGING
             cr_data = er_data ).
 
-
       WHEN 'RUNSAVEDQUERY'.
 
         CLEAR: lv_profile_id,
@@ -324,13 +218,8 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
                lv_page,
                lv_page_supplied,
                lv_result_id,
-               lv_result_c32,
                ls_srv_result,
-               ls_head,
-               lt_column,
-               lt_page,
                ls_response.
-
 
         LOOP AT it_parameter ASSIGNING <ls_parameter>.
           CASE to_upper( <ls_parameter>-name ).
@@ -348,7 +237,6 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           lv_page = 1.
         ENDIF.
 
-
         lv_query_id = zcl_milo_result_repo=>result_id_from_c32( lv_query_id_c32 ).
 
         IF lv_query_id IS INITIAL.
@@ -364,14 +252,12 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           RETURN.
         ENDIF.
 
-        lv_result_id = zcl_milo_result_repo=>create_result_id( ).
+        zcl_milo_odata_result=>initialize_result(
+          IMPORTING
+            ev_result_id = lv_result_id
+            es_response  = ls_response ).
 
         IF lv_result_id IS INITIAL.
-          ls_response-status = 'ERROR'.
-          ls_response-errorcode = 'UUID_GENERATION_FAILED'.
-          ls_response-errortext =
-            zcl_milo_error_mapper=>get_safe_technical_text(
-              'UUID_GENERATION_FAILED' ).
           copy_data_to_ref(
             EXPORTING
               is_data = ls_response
@@ -380,106 +266,20 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           RETURN.
         ENDIF.
 
-        lv_result_c32 = zcl_milo_result_repo=>result_id_to_c32( lv_result_id ).
-
         ls_srv_result = zcl_milo_service=>run_saved_query_result(
           iv_profile_id = lv_profile_id
           iv_query_id   = lv_query_id
           iv_page       = lv_page ).
 
-        ls_head-result_id     = lv_result_id.
-        ls_head-user_name     = sy-uname.
-        ls_head-profile_id    = lv_profile_id.
-        ls_head-object_name   = ls_srv_result-object_name.
-        ls_head-status        = ls_srv_result-status.
-        ls_head-row_count     = ls_srv_result-row_count.
-        ls_head-returned_rows = ls_srv_result-returned_rows.
-        ls_head-total_rows    = ls_srv_result-total_rows.
-        ls_head-max_rows      = ls_srv_result-max_rows.
-        ls_head-result_page   = ls_srv_result-page.
-        ls_head-page_size     = ls_srv_result-page_size.
-        ls_head-total_pages   = ls_srv_result-total_pages.
-        ls_head-truncated     = ls_srv_result-truncated.
-        ls_head-error_code    = ls_srv_result-error_code.
-        ls_head-error_text    = ls_srv_result-error_text.
-        GET TIME STAMP FIELD ls_head-created_at.
-
-        IF ls_srv_result-status = 'SUCCESS'.
-
-          TRY.
-
-              lt_column = zcl_milo_service=>build_result_columns(
-                iv_profile_id = lv_profile_id
-                iv_result_id  = lv_result_id
-              is_parts      = ls_srv_result-query_parts ).
-
-              lt_page = zcl_milo_result_repo=>build_page_chunks(
-                iv_result_id = lv_result_id
-                iv_page_no   = ls_srv_result-page
-                iv_rows_json = ls_srv_result-rows_json ).
-
-            CATCH zcx_milo_validation INTO DATA(lx_saved_validation).
-              CLEAR lt_column.
-              CLEAR lt_page.
-              lv_mapped_error_code =
-                zcl_milo_service=>get_validation_error_code(
-                  lx_saved_validation ).
-              ls_srv_result-error_code = lv_mapped_error_code.
-              IF zcl_milo_error_mapper=>is_technical_error_code(
-                   lv_mapped_error_code ) = abap_true.
-                ls_srv_result-status = 'ERROR'.
-                ls_srv_result-error_text =
-                  zcl_milo_error_mapper=>get_safe_technical_text(
-                    lv_mapped_error_code ).
-              ELSE.
-                ls_srv_result-status = 'BLOCKED'.
-                ls_srv_result-error_text = lx_saved_validation->get_text( ).
-              ENDIF.
-              ls_head-status = ls_srv_result-status.
-              ls_head-error_code = ls_srv_result-error_code.
-              ls_head-error_text = ls_srv_result-error_text.
-            CATCH cx_root.
-              CLEAR lt_column.
-              CLEAR lt_page.
-              ls_srv_result-status = 'ERROR'.
-              ls_srv_result-error_code = 'INTERNAL_ERROR'.
-              ls_srv_result-error_text =
-                zcl_milo_error_mapper=>get_safe_technical_text(
-                  'INTERNAL_ERROR' ).
-              ls_head-status = ls_srv_result-status.
-              ls_head-error_code = ls_srv_result-error_code.
-              ls_head-error_text = ls_srv_result-error_text.
-          ENDTRY.
-
-        ENDIF.
-
-        lv_result_saved = zcl_milo_result_repo=>save_result(
-          is_head   = ls_head
-          it_column = lt_column
-          it_page   = lt_page ).
-
-        IF lv_result_saved <> abap_true.
-          ls_srv_result-status = 'ERROR'.
-          ls_srv_result-error_code = 'RESULT_STORAGE_FAILED'.
-          ls_srv_result-error_text =
-            zcl_milo_error_mapper=>get_safe_technical_text(
-              'RESULT_STORAGE_FAILED' ).
-          CLEAR lv_result_c32.
-        ENDIF.
-
-        ls_response-resultid     = lv_result_c32.
-        ls_response-status       = ls_srv_result-status.
-        ls_response-objectname   = ls_srv_result-object_name.
-        ls_response-rowcount     = ls_srv_result-row_count.
-        ls_response-returnedrows = ls_srv_result-returned_rows.
-        ls_response-totalrows    = ls_srv_result-total_rows.
-        ls_response-maxrows      = ls_srv_result-max_rows.
-        ls_response-page         = ls_srv_result-page.
-        ls_response-pagesize     = ls_srv_result-page_size.
-        ls_response-totalpages   = ls_srv_result-total_pages.
-        ls_response-truncated    = ls_srv_result-truncated.
-        ls_response-errorcode    = ls_srv_result-error_code.
-        ls_response-errortext    = ls_srv_result-error_text.
+        zcl_milo_odata_result=>finalize_result(
+          EXPORTING
+            iv_result_id     = lv_result_id
+            iv_profile_id    = lv_profile_id
+            iv_metadata_mode = zcl_milo_odata_result=>c_metadata_query
+          IMPORTING
+            es_response      = ls_response
+          CHANGING
+            cs_result        = ls_srv_result ).
 
         copy_data_to_ref(
           EXPORTING
@@ -653,20 +453,16 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           lv_max_rows = 50.
         ENDIF.
 
-
         DATA lt_table_response TYPE zcl_zsu26_gw_milo_mpc=>tt_sqlwbtable.
 
         TRY.
-
             DATA(lt_table) = zcl_milo_service=>search_ddic_tables(
               iv_profile_id = lv_profile_id
               iv_search     = lv_search_text
               iv_max_rows   = lv_max_rows ).
 
             LOOP AT lt_table INTO DATA(ls_table).
-
               APPEND INITIAL LINE TO lt_table_response ASSIGNING FIELD-SYMBOL(<ls_table_response>).
-
               <ls_table_response>-profileid = lv_profile_id.
               <ls_table_response>-objectname = ls_table-tabname.
 
@@ -710,12 +506,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
                lv_page,
                lv_page_supplied,
                lv_result_id,
-               lv_result_c32,
                ls_srv_result,
-               ls_head,
-               lt_result_field,
-               lt_column,
-               lt_page,
                ls_response.
 
         LOOP AT it_parameter ASSIGNING <ls_parameter>.
@@ -732,6 +523,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           ENDCASE.
         ENDLOOP.
 
+
         lv_object_name = to_upper( condense( lv_object_name ) ).
 
         IF lv_max_rows IS INITIAL.
@@ -742,14 +534,12 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           lv_page = 1.
         ENDIF.
 
-        lv_result_id = zcl_milo_result_repo=>create_result_id( ).
+        zcl_milo_odata_result=>initialize_result(
+          IMPORTING
+            ev_result_id = lv_result_id
+            es_response  = ls_response ).
 
         IF lv_result_id IS INITIAL.
-          ls_response-status = 'ERROR'.
-          ls_response-errorcode = 'UUID_GENERATION_FAILED'.
-          ls_response-errortext =
-            zcl_milo_error_mapper=>get_safe_technical_text(
-              'UUID_GENERATION_FAILED' ).
           copy_data_to_ref(
             EXPORTING
               is_data = ls_response
@@ -758,132 +548,21 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           RETURN.
         ENDIF.
 
-        lv_result_c32 = zcl_milo_result_repo=>result_id_to_c32( lv_result_id ).
-
         ls_srv_result = zcl_milo_service=>preview_table_result(
           iv_profile_id = lv_profile_id
           iv_obj_name   = lv_object_name
           iv_row_limit  = lv_max_rows
           iv_page       = lv_page ).
 
-        ls_head-result_id     = lv_result_id.
-        ls_head-user_name     = sy-uname.
-        ls_head-profile_id    = lv_profile_id.
-        ls_head-object_name   = ls_srv_result-object_name.
-        ls_head-status        = ls_srv_result-status.
-        ls_head-row_count     = ls_srv_result-row_count.
-        ls_head-returned_rows = ls_srv_result-returned_rows.
-        ls_head-total_rows    = ls_srv_result-total_rows.
-        ls_head-max_rows      = ls_srv_result-max_rows.
-        ls_head-result_page   = ls_srv_result-page.
-        ls_head-page_size     = ls_srv_result-page_size.
-        ls_head-total_pages   = ls_srv_result-total_pages.
-        ls_head-truncated     = ls_srv_result-truncated.
-        ls_head-error_code    = ls_srv_result-error_code.
-        ls_head-error_text    = ls_srv_result-error_text.
-        GET TIME STAMP FIELD ls_head-created_at.
-
-        IF ls_srv_result-status = 'SUCCESS'.
-
-          TRY.
-              DATA(lt_preview_field) = zcl_milo_service=>get_ddic_fields(
-                iv_profile_id = lv_profile_id
-                iv_obj_name   = ls_srv_result-object_name ).
-
-              DATA(lv_preview_field_count) = 0.
-
-              LOOP AT lt_preview_field INTO DATA(ls_preview_field).
-                lv_preview_field_count = lv_preview_field_count + 1.
-                IF lv_preview_field_count > zcl_milo_config=>c_max_select_fields.
-                  EXIT.
-                ENDIF.
-                APPEND ls_preview_field TO lt_result_field.
-              ENDLOOP.
-
-              LOOP AT lt_result_field INTO DATA(ls_preview_result_field).
-                APPEND INITIAL LINE TO lt_column ASSIGNING FIELD-SYMBOL(<ls_preview_column>).
-                <ls_preview_column>-result_id       = lv_result_id.
-                <ls_preview_column>-column_position = ls_preview_result_field-position.
-                <ls_preview_column>-field_name      = ls_preview_result_field-fieldname.
-                <ls_preview_column>-json_key        = to_lower( ls_preview_result_field-fieldname ).
-                <ls_preview_column>-element         = ls_preview_result_field-rollname.
-                <ls_preview_column>-abap_type       = ls_preview_result_field-datatype.
-                <ls_preview_column>-length          = ls_preview_result_field-leng.
-                <ls_preview_column>-decimals        = ls_preview_result_field-decimals.
-                <ls_preview_column>-is_key          = ls_preview_result_field-keyflag.
-                <ls_preview_column>-column_label    = ls_preview_result_field-ddtext.
-                <ls_preview_column>-origin_type      = ls_preview_result_field-origin_type.
-                <ls_preview_column>-origin_structure = ls_preview_result_field-origin_structure.
-                <ls_preview_column>-include_depth    = ls_preview_result_field-include_depth.
-              ENDLOOP.
-
-              lt_page = zcl_milo_result_repo=>build_page_chunks(
-                iv_result_id = lv_result_id
-                iv_page_no   = ls_srv_result-page
-                iv_rows_json = ls_srv_result-rows_json ).
-
-            CATCH zcx_milo_validation INTO DATA(lx_preview_validation).
-              CLEAR lt_column.
-              CLEAR lt_page.
-              lv_mapped_error_code =
-                zcl_milo_service=>get_validation_error_code(
-                  lx_preview_validation ).
-              ls_srv_result-error_code = lv_mapped_error_code.
-              IF zcl_milo_error_mapper=>is_technical_error_code(
-                   lv_mapped_error_code ) = abap_true.
-                ls_srv_result-status = 'ERROR'.
-                ls_srv_result-error_text =
-                  zcl_milo_error_mapper=>get_safe_technical_text(
-                    lv_mapped_error_code ).
-              ELSE.
-                ls_srv_result-status = 'BLOCKED'.
-                ls_srv_result-error_text = lx_preview_validation->get_text( ).
-              ENDIF.
-              ls_head-status = ls_srv_result-status.
-              ls_head-error_code = ls_srv_result-error_code.
-              ls_head-error_text = ls_srv_result-error_text.
-            CATCH cx_root.
-              CLEAR lt_column.
-              CLEAR lt_page.
-              ls_srv_result-status = 'ERROR'.
-              ls_srv_result-error_code = 'INTERNAL_ERROR'.
-              ls_srv_result-error_text =
-                zcl_milo_error_mapper=>get_safe_technical_text(
-                  'INTERNAL_ERROR' ).
-              ls_head-status = ls_srv_result-status.
-              ls_head-error_code = ls_srv_result-error_code.
-              ls_head-error_text = ls_srv_result-error_text.
-          ENDTRY.
-
-        ENDIF.
-
-        lv_result_saved = zcl_milo_result_repo=>save_result(
-          is_head   = ls_head
-          it_column = lt_column
-          it_page   = lt_page ).
-
-        IF lv_result_saved <> abap_true.
-          ls_srv_result-status = 'ERROR'.
-          ls_srv_result-error_code = 'RESULT_STORAGE_FAILED'.
-          ls_srv_result-error_text =
-            zcl_milo_error_mapper=>get_safe_technical_text(
-              'RESULT_STORAGE_FAILED' ).
-          CLEAR lv_result_c32.
-        ENDIF.
-
-        ls_response-resultid     = lv_result_c32.
-        ls_response-status       = ls_srv_result-status.
-        ls_response-objectname   = ls_srv_result-object_name.
-        ls_response-rowcount     = ls_srv_result-row_count.
-        ls_response-returnedrows = ls_srv_result-returned_rows.
-        ls_response-totalrows    = ls_srv_result-total_rows.
-        ls_response-maxrows      = ls_srv_result-max_rows.
-        ls_response-page         = ls_srv_result-page.
-        ls_response-pagesize     = ls_srv_result-page_size.
-        ls_response-totalpages   = ls_srv_result-total_pages.
-        ls_response-truncated    = ls_srv_result-truncated.
-        ls_response-errorcode    = ls_srv_result-error_code.
-        ls_response-errortext    = ls_srv_result-error_text.
+        zcl_milo_odata_result=>finalize_result(
+          EXPORTING
+            iv_result_id     = lv_result_id
+            iv_profile_id    = lv_profile_id
+            iv_metadata_mode = zcl_milo_odata_result=>c_metadata_preview
+          IMPORTING
+            es_response      = ls_response
+          CHANGING
+            cs_result        = ls_srv_result ).
 
         copy_data_to_ref(
           EXPORTING
@@ -944,6 +623,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
           CHANGING
             cr_data = er_data ).
 
+
       WHEN OTHERS.
         CALL METHOD super->/iwbep/if_mgw_appl_srv_runtime~execute_action
           EXPORTING
@@ -954,6 +634,7 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
             er_data                 = er_data.
 
     ENDCASE.
+
 
 
   ENDMETHOD.

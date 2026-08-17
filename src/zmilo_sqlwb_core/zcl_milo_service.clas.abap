@@ -192,20 +192,6 @@ CLASS zcl_milo_service DEFINITION
       RAISING
         zcx_milo_validation.
 
-    CLASS-METHODS preview_table_csv
-      IMPORTING
-        iv_profile_id  TYPE zmilo_profile_id
-        iv_obj_name    TYPE zmilo_obj_name
-        iv_row_limit   TYPE i DEFAULT 100
-        iv_page        TYPE i DEFAULT 1
-      EXPORTING
-        ev_object_name TYPE zmilo_obj_name
-        ev_row_count   TYPE i
-        ev_total_rows  TYPE i
-        ev_csv         TYPE string
-      RAISING
-        zcx_milo_validation.
-
     CLASS-METHODS preview_table_result
       IMPORTING
         iv_profile_id    TYPE zmilo_profile_id
@@ -854,114 +840,6 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
           iv_sql_text      = lv_log_text
           iv_status        = lv_error_status
           iv_exec_mode     = 'PREVIEW'
-          iv_source_obj    = lv_log_obj
-          iv_row_count     = 0
-          iv_row_limit_req = iv_row_limit
-          iv_row_limit_eff = lv_row_limit_eff
-          iv_truncated     = abap_false
-          iv_duration_ms   = lv_dur
-          iv_result_bytes  = 0
-          iv_error_code    = lv_error_code
-          iv_error_text    = lx_validation->get_text( ) ).
-
-        RAISE EXCEPTION lx_validation.
-    ENDTRY.
-
-  ENDMETHOD.
-
-
-  METHOD preview_table_csv.
-
-    DATA ls_role TYPE zmilo_role.
-    DATA lv_start TYPE timestampl.
-    DATA lv_end TYPE timestampl.
-    DATA lv_dur TYPE i.
-    DATA lv_row_limit_eff TYPE i.
-    DATA lv_log_text TYPE string.
-    DATA lv_log_obj TYPE zmilo_obj_name.
-    DATA lv_log_id TYPE sysuuid_x16.
-    DATA lv_error_code TYPE zmilo_error_code.
-    DATA lv_error_status TYPE zmilo_status.
-
-    CLEAR: ev_object_name,
-           ev_row_count,
-           ev_total_rows,
-           ev_csv.
-
-    GET TIME STAMP FIELD lv_start.
-    lv_log_obj = to_upper( iv_obj_name ).
-    lv_log_text = |EXPORT { lv_log_obj }|.
-
-    lv_row_limit_eff = iv_row_limit.
-    IF lv_row_limit_eff IS INITIAL OR lv_row_limit_eff > 100.
-      lv_row_limit_eff = 100.
-    ENDIF.
-
-    TRY.
-        IF iv_page < 1.
-          RAISE EXCEPTION TYPE zcx_milo_validation
-            EXPORTING
-              textid     = zcx_milo_validation=>invalid_page_number
-              mv_value_1 = CONV string( iv_page ).
-        ENDIF.
-
-        ls_role = get_active_role( iv_profile_id ).
-
-        zcl_milo_ddic_browser=>preview_table_csv(
-          EXPORTING
-            iv_wlist_profile_id = ls_role-wlist_profile_id
-            iv_mask_profile_id  = ls_role-mask_profile_id
-            iv_obj_name         = iv_obj_name
-            iv_row_limit        = iv_row_limit
-            iv_page             = iv_page
-          IMPORTING
-            ev_object_name      = ev_object_name
-            ev_row_count        = ev_row_count
-            ev_total_rows       = ev_total_rows
-            ev_csv              = ev_csv ).
-
-        GET TIME STAMP FIELD lv_end.
-        lv_dur = cl_abap_tstmp=>subtract(
-          tstmp1 = lv_end
-          tstmp2 = lv_start ) * 1000.
-
-        lv_log_id = zcl_milo_logger=>log_execution(
-          iv_sql_text      = lv_log_text
-          iv_status        = 'SUCCESS'
-          iv_exec_mode     = 'EXPORT'
-          iv_source_obj    = ev_object_name
-          iv_row_count     = ev_row_count
-          iv_row_limit_req = iv_row_limit
-          iv_row_limit_eff = lv_row_limit_eff
-          iv_truncated     = xsdbool( ev_total_rows > ev_row_count )
-          iv_duration_ms   = lv_dur
-          iv_result_bytes  = strlen( ev_csv ) ).
-
-        IF lv_log_id IS INITIAL.
-          RAISE EXCEPTION TYPE zcx_milo_validation
-            EXPORTING
-              textid = zcx_milo_validation=>log_write_failed.
-        ENDIF.
-
-      CATCH zcx_milo_validation INTO DATA(lx_validation).
-        GET TIME STAMP FIELD lv_end.
-        lv_dur = cl_abap_tstmp=>subtract(
-          tstmp1 = lv_end
-          tstmp2 = lv_start ) * 1000.
-
-        lv_error_code =
-          zcl_milo_error_mapper=>get_validation_error_code( lx_validation ).
-        IF zcl_milo_error_mapper=>is_technical_error_code(
-             lv_error_code ) = abap_true.
-          lv_error_status = 'ERROR'.
-        ELSE.
-          lv_error_status = 'BLOCKED'.
-        ENDIF.
-
-        zcl_milo_logger=>log_execution(
-          iv_sql_text      = lv_log_text
-          iv_status        = lv_error_status
-          iv_exec_mode     = 'EXPORT'
           iv_source_obj    = lv_log_obj
           iv_row_count     = 0
           iv_row_limit_req = iv_row_limit
