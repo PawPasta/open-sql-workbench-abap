@@ -1,13 +1,11 @@
 *"* use this source file for your ABAP unit test classes
 CLASS lcl_ut_validator DEFINITION FOR TESTING
   DURATION SHORT
-  RISK LEVEL HARMLESS.
+  RISK LEVEL DANGEROUS.
 
   PRIVATE SECTION.
     CONSTANTS:
-      c_profile_user TYPE zmilo_profile_id VALUE 'UT_USER_PROF',
-      c_wlist_prof   TYPE zmilo_wlist_profile_id VALUE 'UT_WLIST_PROF',
-      c_mask_prof    TYPE zmilo_mask_profile_id VALUE 'UT_MASK_PROF'.
+      c_wlist_prof TYPE zmilo_wlist_profile_id VALUE 'UT_WLIST_PROF'.
 
     METHODS:
       setup,
@@ -23,30 +21,15 @@ CLASS lcl_ut_validator DEFINITION FOR TESTING
       test_val_group_having_valid    FOR TESTING,
       test_val_group_having_invalid  FOR TESTING,
       test_val_order_by_valid        FOR TESTING,
-      test_val_order_by_invalid      FOR TESTING.
+      test_val_order_by_invalid      FOR TESTING,
+      test_val_top_limit             FOR TESTING.
 
 ENDCLASS.
 
 CLASS lcl_ut_validator IMPLEMENTATION.
 
   METHOD setup.
-    DATA ls_role TYPE zmilo_role.
     DATA ls_wlist TYPE zmilo_wlist.
-    DATA ls_mask TYPE zmilo_mask.
-
-    ls_role-profile_id       = c_profile_user.
-    ls_role-pfcg_role        = 'Z_TEST_PFCG_ROLE'.
-    ls_role-wlist_profile_id = c_wlist_prof.
-    ls_role-mask_profile_id  = c_mask_prof.
-    ls_role-is_active        = 'X'.
-    MODIFY zmilo_role FROM @ls_role.
-
-    DATA ls_agr TYPE agr_users.
-    ls_agr-uname    = sy-uname.
-    ls_agr-agr_name = 'Z_TEST_PFCG_ROLE'.
-    ls_agr-from_dat = sy-datum - 1.
-    ls_agr-to_dat   = sy-datum + 1.
-    MODIFY agr_users FROM @ls_agr.
 
     ls_wlist-wlist_profile_id = c_wlist_prof.
     ls_wlist-obj_name         = 'SPFLI'.
@@ -57,23 +40,11 @@ CLASS lcl_ut_validator IMPLEMENTATION.
     ls_wlist-obj_name         = 'SFLIGHT'.
     MODIFY zmilo_wlist FROM @ls_wlist.
 
-    ls_mask-mask_profile_id = c_mask_prof.
-    ls_mask-obj_name        = 'SPFLI'.
-    ls_mask-field_name      = 'CITYFROM'.
-    ls_mask-mask_type       = 'PARTIAL'.
-    ls_mask-is_active       = 'X'.
-    MODIFY zmilo_mask FROM @ls_mask.
-
     COMMIT WORK AND WAIT.
   ENDMETHOD.
 
   METHOD teardown.
-    DELETE FROM zmilo_role WHERE profile_id = @c_profile_user.
     DELETE FROM zmilo_wlist WHERE wlist_profile_id = @c_wlist_prof.
-    DELETE FROM zmilo_mask WHERE mask_profile_id = @c_mask_prof.
-    DELETE FROM agr_users WHERE uname = @sy-uname AND agr_name = 'Z_TEST_PFCG_ROLE'.
-    DELETE FROM zmilo_query WHERE profile_id = @c_profile_user.
-    DELETE FROM zmilo_log WHERE user_name = @sy-uname AND obj_name = 'SPFLI'.
     COMMIT WORK AND WAIT.
   ENDMETHOD.
 
@@ -139,7 +110,7 @@ CLASS lcl_ut_validator IMPLEMENTATION.
           iv_wlist_profile_id = c_wlist_prof ).
         cl_abap_unit_assert=>fail( 'Unwhitelisted table check failed' ).
       CATCH zcx_milo_validation INTO DATA(lx_val).
-        cl_abap_unit_assert=>assert_equals( act = lx_val->if_t100_message~t100key exp = zcx_milo_validation=>object_not_allowed ).
+        cl_abap_unit_assert=>assert_equals( act = lx_val->if_t100_message~t100key exp = zcx_milo_validation=>object_not_whitelisted ).
     ENDTRY.
   ENDMETHOD.
 
@@ -219,6 +190,19 @@ CLASS lcl_ut_validator IMPLEMENTATION.
         cl_abap_unit_assert=>fail( 'Invalid ORDER BY check failed' ).
       CATCH zcx_milo_validation INTO DATA(lx_val).
         cl_abap_unit_assert=>assert_equals( act = lx_val->if_t100_message~t100key exp = zcx_milo_validation=>invalid_field ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD test_val_top_limit.
+    TRY.
+        zcl_milo_validator=>validate_select_sql(
+          iv_sql              = 'SELECT TOP 51 CARRID FROM SPFLI'
+          iv_wlist_profile_id = c_wlist_prof ).
+        cl_abap_unit_assert=>fail( 'TOP must not exceed the configured maximum' ).
+      CATCH zcx_milo_validation INTO DATA(lx_validation).
+        cl_abap_unit_assert=>assert_equals(
+          act = lx_validation->if_t100_message~t100key
+          exp = zcx_milo_validation=>top_limit_exceeded ).
     ENDTRY.
   ENDMETHOD.
 

@@ -1,13 +1,12 @@
 *"* use this source file for your ABAP unit test classes
 CLASS lcl_ut_executor DEFINITION FOR TESTING
   DURATION SHORT
-  RISK LEVEL HARMLESS.
+  RISK LEVEL DANGEROUS.
 
   PRIVATE SECTION.
     CONSTANTS:
-      c_profile_user TYPE zmilo_profile_id VALUE 'UT_USER_PROF',
-      c_wlist_prof   TYPE zmilo_wlist_profile_id VALUE 'UT_WLIST_PROF',
-      c_mask_prof    TYPE zmilo_mask_profile_id VALUE 'UT_MASK_PROF'.
+      c_wlist_prof TYPE zmilo_wlist_profile_id VALUE 'UT_WLIST_PROF',
+      c_mask_prof  TYPE zmilo_mask_profile_id VALUE 'UT_MASK_PROF'.
 
     METHODS:
       setup,
@@ -22,23 +21,8 @@ ENDCLASS.
 CLASS lcl_ut_executor IMPLEMENTATION.
 
   METHOD setup.
-    DATA ls_role TYPE zmilo_role.
     DATA ls_wlist TYPE zmilo_wlist.
     DATA ls_mask TYPE zmilo_mask.
-
-    ls_role-profile_id       = c_profile_user.
-    ls_role-pfcg_role        = 'Z_TEST_PFCG_ROLE'.
-    ls_role-wlist_profile_id = c_wlist_prof.
-    ls_role-mask_profile_id  = c_mask_prof.
-    ls_role-is_active        = 'X'.
-    MODIFY zmilo_role FROM @ls_role.
-
-    DATA ls_agr TYPE agr_users.
-    ls_agr-uname    = sy-uname.
-    ls_agr-agr_name = 'Z_TEST_PFCG_ROLE'.
-    ls_agr-from_dat = sy-datum - 1.
-    ls_agr-to_dat   = sy-datum + 1.
-    MODIFY agr_users FROM @ls_agr.
 
     ls_wlist-wlist_profile_id = c_wlist_prof.
     ls_wlist-obj_name         = 'SPFLI'.
@@ -60,12 +44,14 @@ CLASS lcl_ut_executor IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD teardown.
-    DELETE FROM zmilo_role WHERE profile_id = @c_profile_user.
     DELETE FROM zmilo_wlist WHERE wlist_profile_id = @c_wlist_prof.
     DELETE FROM zmilo_mask WHERE mask_profile_id = @c_mask_prof.
-    DELETE FROM agr_users WHERE uname = @sy-uname AND agr_name = 'Z_TEST_PFCG_ROLE'.
-    DELETE FROM zmilo_query WHERE profile_id = @c_profile_user.
-    DELETE FROM zmilo_log WHERE user_name = @sy-uname AND obj_name = 'SPFLI'.
+    DELETE FROM zmilo_log
+      WHERE user_name = @sy-uname
+        AND ( sql_text = 'SELECT CARRID, CONNID, CITYFROM FROM SPFLI'
+           OR sql_text = 'SELECT A~CARRID, B~PRICE FROM SPFLI AS A INNER JOIN SFLIGHT AS B ON A~CARRID = B~CARRID'
+           OR sql_text = 'SELECT CARRID, COUNT( * ) AS TOTAL FROM SPFLI GROUP BY CARRID'
+           OR sql_text = 'DELETE FROM SPFLI' ).
     COMMIT WORK AND WAIT.
   ENDMETHOD.
 
