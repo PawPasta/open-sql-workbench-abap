@@ -26,6 +26,7 @@ CLASS zcl_milo_service DEFINITION
         rows_json     TYPE string,
         error_code    TYPE zmilo_error_code,
         error_text    TYPE string,
+        query_parts   TYPE zcl_milo_sql_parser=>ty_query_parts,
       END OF ty_run_result.
 
     CLASS-METHODS get_role_profile
@@ -55,6 +56,7 @@ CLASS zcl_milo_service DEFINITION
         ev_rows_json     TYPE string
         ev_error_code    TYPE zmilo_error_code
         ev_error_text    TYPE string
+        es_parts         TYPE zcl_milo_sql_parser=>ty_query_parts
       RAISING
         zcx_milo_validation.
 
@@ -81,6 +83,7 @@ CLASS zcl_milo_service DEFINITION
         ev_rows_json     TYPE string
         ev_error_code    TYPE zmilo_error_code
         ev_error_text    TYPE string
+        es_parts         TYPE zcl_milo_sql_parser=>ty_query_parts
       RAISING
         zcx_milo_validation.
 
@@ -167,8 +170,9 @@ CLASS zcl_milo_service DEFINITION
     CLASS-METHODS build_result_columns
       IMPORTING
         iv_profile_id    TYPE zmilo_profile_id
-        iv_sql           TYPE string
+        iv_sql           TYPE string OPTIONAL
         iv_result_id     TYPE sysuuid_x16 OPTIONAL
+        is_parts         TYPE zcl_milo_sql_parser=>ty_query_parts OPTIONAL
       RETURNING
         VALUE(rt_column) TYPE zcl_milo_result_repo=>tt_column
       RAISING
@@ -325,7 +329,10 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
 
     CLEAR rt_column.
 
-    ls_parts = zcl_milo_sql_parser=>parse( iv_sql ).
+    ls_parts = is_parts.
+    IF ls_parts-table_name IS INITIAL.
+      ls_parts = zcl_milo_sql_parser=>parse( iv_sql ).
+    ENDIF.
 
 
     IF ls_parts-is_join = abap_true.
@@ -1048,8 +1055,8 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
            ev_max_rows,
            ev_truncated,
            ev_rows_json,
-           ev_error_code,
-           ev_error_text.
+            ev_error_text,
+           es_parts.
 
     IF iv_page < 1.
       RAISE EXCEPTION TYPE zcx_milo_validation
@@ -1075,8 +1082,9 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
         ev_max_rows         = ev_max_rows
         ev_truncated        = ev_truncated
         ev_rows_json        = ev_rows_json
-        ev_error_code       = ev_error_code
-        ev_error_text       = ev_error_text ).
+        ev_error_text       = ev_error_text
+        es_parts            = es_parts ).
+
 
   ENDMETHOD.
 
@@ -1103,7 +1111,8 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
             ev_truncated   = rs_result-truncated
             ev_rows_json   = rs_result-rows_json
             ev_error_code  = rs_result-error_code
-            ev_error_text  = rs_result-error_text ).
+             ev_error_text  = rs_result-error_text
+            es_parts       = rs_result-query_parts ).
 
         rs_result-total_rows = rs_result-row_count.
         lv_page = iv_page.
@@ -1164,7 +1173,8 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
            ev_truncated,
            ev_rows_json,
            ev_error_code,
-           ev_error_text.
+           ev_error_text,
+           es_parts.
 
     IF iv_page < 1.
       RAISE EXCEPTION TYPE zcx_milo_validation
@@ -1191,7 +1201,8 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
         ev_truncated        = ev_truncated
         ev_rows_json        = ev_rows_json
         ev_error_code       = ev_error_code
-        ev_error_text       = ev_error_text ).
+        ev_error_text       = ev_error_text
+        es_parts            = es_parts ).
 
   ENDMETHOD.
 
@@ -1221,7 +1232,9 @@ CLASS ZCL_MILO_SERVICE IMPLEMENTATION.
             ev_truncated     = rs_result-truncated
             ev_rows_json     = rs_result-rows_json
             ev_error_code    = rs_result-error_code
-            ev_error_text    = rs_result-error_text ).
+            ev_error_text    = rs_result-error_text
+            es_parts         = rs_result-query_parts ).
+
 
         rs_result-total_rows = rs_result-row_count.
         rs_result-page = lv_page.

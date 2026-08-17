@@ -66,12 +66,12 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
     DATA lv_visibility   TYPE zmilo_visibility.
     DATA lv_tags         TYPE zmilo_tags.
     DATA lv_description  TYPE zmilo_description.
-    DATA lv_saved_sql_text TYPE string.
+
     DATA lv_result_id   TYPE sysuuid_x16.
     DATA lv_result_c32  TYPE string.
     DATA ls_srv_result  TYPE zcl_milo_service=>ty_run_result.
     DATA ls_head        TYPE zmilo_rhead.
-    DATA ls_saved_query TYPE zmilo_query.
+
     DATA lt_result_field TYPE zcl_milo_service=>tt_ddic_field.
     DATA lt_column      TYPE zcl_milo_result_repo=>tt_column.
     DATA lt_page        TYPE zcl_milo_result_repo=>tt_page.
@@ -156,8 +156,9 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
 
               lt_column = zcl_milo_service=>build_result_columns(
                 iv_profile_id = lv_profile_id
-                iv_sql        = lv_sql_text
-                iv_result_id  = lv_result_id ).
+                iv_result_id  = lv_result_id
+              is_parts      = ls_srv_result-query_parts ).
+
 
               lt_page = zcl_milo_result_repo=>build_page_chunks(
                 iv_result_id = lv_result_id
@@ -324,10 +325,8 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
                lv_page_supplied,
                lv_result_id,
                lv_result_c32,
-               lv_saved_sql_text,
                ls_srv_result,
                ls_head,
-               ls_saved_query,
                lt_column,
                lt_page,
                ls_response.
@@ -408,15 +407,11 @@ CLASS ZCL_ZSU26_GW_MILO_DPC_EXT IMPLEMENTATION.
         IF ls_srv_result-status = 'SUCCESS'.
 
           TRY.
-              ls_saved_query = zcl_milo_query_repo=>get_query(
-                iv_query_id   = lv_query_id
-                iv_profile_id = lv_profile_id ).
-              lv_saved_sql_text = ls_saved_query-query_text.
 
               lt_column = zcl_milo_service=>build_result_columns(
                 iv_profile_id = lv_profile_id
-                iv_sql        = lv_saved_sql_text
-                iv_result_id  = lv_result_id ).
+                iv_result_id  = lv_result_id
+              is_parts      = ls_srv_result-query_parts ).
 
               lt_page = zcl_milo_result_repo=>build_page_chunks(
                 iv_result_id = lv_result_id
